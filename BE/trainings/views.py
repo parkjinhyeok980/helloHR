@@ -10,8 +10,19 @@ from django.views.decorators.http import require_GET, require_http_methods
 from .models import Training
 
 
+def serialize_participant(participant):
+    return {
+        'id': participant.id,
+        'employee_number': participant.employee.employee_number,
+        'name': participant.employee.name,
+        'department': participant.employee.department.name,
+        'attended': any(record.status == 'present' for record in participant.attendance_records.all()),
+    }
+
+
 def serialize_training(training):
     starts_at = timezone.localtime(training.starts_at) if training.starts_at else None
+    participants = list(training.participants.all())
     return {
         'id': training.id,
         'title': training.title,
@@ -21,7 +32,8 @@ def serialize_training(training):
         'time': starts_at.strftime('%H:%M') if starts_at else '',
         'location': training.location,
         'code': training.attendance_code,
-        'participant_count': training.participants.count(),
+        'participant_count': len(participants),
+        'participants': [serialize_participant(item) for item in participants],
     }
 
 
@@ -75,7 +87,9 @@ def csrf_token(request):
 @require_http_methods(['GET', 'POST'])
 def training_list(request):
     if request.method == 'GET':
-        trainings = Training.objects.prefetch_related('participants').order_by('-starts_at', '-id')
+        trainings = Training.objects.prefetch_related(
+            'participants__employee__department', 'participants__attendance_records'
+        ).order_by('-starts_at', '-id')
         return JsonResponse({'results': [serialize_training(item) for item in trainings]})
 
     fields, errors = parse_payload(request)

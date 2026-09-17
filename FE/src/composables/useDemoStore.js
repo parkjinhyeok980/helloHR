@@ -4,26 +4,40 @@ import {
   createTrainingRequest,
   updateTrainingRequest,
   deleteTrainingRequest,
+  createParticipantRequest,
+  updateParticipantRequest,
+  deleteParticipantRequest,
+  uploadParticipantsRequest,
 } from '../api/trainings'
 
-const participantStorageKey = 'hellohr-demo-participants-v2'
+const attendanceStorageKey = 'hellohr-attendance-v1'
 
-function readLocalParticipants() {
+function readLocalAttendance() {
   try {
-    return JSON.parse(localStorage.getItem(participantStorageKey)) ?? {}
+    return JSON.parse(localStorage.getItem(attendanceStorageKey)) ?? {}
   } catch {
     return {}
   }
 }
 
-const withLocalParticipants = (training) => ({
+const attendanceOverrides = readLocalAttendance()
+const withLocalAttendance = (training) => ({
   ...training,
-  participants: readLocalParticipants()[training.id] ?? [],
+  participants: training.participants.map((person) => ({
+    ...person,
+    attended: attendanceOverrides[person.id] ?? person.attended,
+  })),
 })
+
+function saveAttendance(person) {
+  attendanceOverrides[person.id] = person.attended
+  localStorage.setItem(attendanceStorageKey, JSON.stringify(attendanceOverrides))
+}
 
 export const trainings = ref([])
 export const loading = ref(false)
 export const saving = ref(false)
+export const uploading = ref(false)
 export const apiError = ref('')
 export const section = ref('dashboard')
 export const mode = ref('admin')
@@ -39,15 +53,13 @@ const emptyTraining = () => ({
 })
 
 export const newTraining = ref(emptyTraining())
-export const newParticipant = ref({ name: '', department: '' })
+export const newParticipant = ref({ employee_number: '', name: '', department: '' })
+export const editingParticipantId = ref(null)
 export const attendee = ref({ trainingId: null, name: '', code: '' })
 export const attendeeStep = ref('list')
 export const attendeeError = ref('')
 
-watch(trainings, (value) => {
-  const participants = Object.fromEntries(value.map((item) => [item.id, item.participants]))
-  localStorage.setItem(participantStorageKey, JSON.stringify(participants))
-}, { deep: true })
+watch(selectedId, () => cancelParticipantEdit())
 
 export const selectedTraining = computed(() => trainings.value.find((item) => item.id === selectedId.value) ?? trainings.value[0])
 export const attendeeTraining = computed(() => trainings.value.find((item) => item.id === attendee.value.trainingId))
@@ -71,7 +83,7 @@ export async function loadTrainings() {
   loading.value = true
   apiError.value = ''
   try {
-    trainings.value = (await fetchTrainings()).map(withLocalParticipants)
+    trainings.value = (await fetchTrainings()).map(withLocalAttendance)
     if (!trainings.value.some((item) => item.id === selectedId.value)) {
       selectedId.value = trainings.value[0]?.id ?? null
     }
@@ -171,20 +183,89 @@ export async function removeTraining(training) {
   }
 }
 
-export function addParticipant() {
-  if (!selectedTraining.value || !newParticipant.value.name.trim()) return
-  const name = newParticipant.value.name.trim()
-  if (selectedTraining.value.participants.some((person) => person.name === name)) {
-    notice.value = '이 교육에 같은 이름의 대상자가 이미 있습니다.'
-    return
+export function startEditParticipant(person) {
+  editingParticipantId.value = person.id
+  newParticipant.value = {
+    employee_number: person.employee_number,
+    name: person.name,
+    department: person.department,
   }
-  selectedTraining.value.participants.push({ id: Date.now(), name, department: newParticipant.value.department.trim() || '미지정', attended: false })
-  newParticipant.value = { name: '', department: '' }
-  notice.value = '대상자를 등록했습니다.'
+  notice.value = ''
+}
+
+export function cancelParticipantEdit() {
+  editingParticipantId.value = null
+  newParticipant.value = { employee_number: '', name: '', department: '' }
+}
+
+export async function saveParticipant() {
+  if (!selectedTraining.value) return
+  saving.value = true
+  apiError.value = ''
+  try {
+    if (editingParticipantId.value) {
+      await updateParticipantRequest(
+        selectedTraining.value.id, editingParticipantId.value, newParticipant.value
+      )
+      notice.value = '대상자 정보를 수정했습니다.'
+    } else {
+      const person = await createParticipantRequest(selectedTraining.value.id, newParticipant.value)
+      notice.value = selectedTraining.value.participants.some((item) => item.id === person.id)
+        ? '이미 이 교육에 등록된 사번입니다.'
+        : '대상자를 등록했습니다.'
+    }
+    cancelParticipantEdit()
+    await loadTrainings()
+  } catch (error) {
+    apiError.value = error.message
+  } finally {
+    saving.value = false
+  }
+}
+
+export async function removeParticipant(person) {
+  if (!selectedTraining.value) return
+  if (!window.confirm(`${person.name}님을 이 교육의 대상자 명단에서 삭제할까요? 연결된 출석 기록도 삭제됩니다.`)) return
+  saving.value = true
+  apiError.value = ''
+  try {
+    await deleteParticipantRequest(selectedTraining.value.id, person.id)
+    delete attendanceOverrides[person.id]
+    localStorage.setItem(attendanceStorageKey, JSON.stringify(attendanceOverrides))
+    if (editingParticipantId.value === person.id) cancelParticipantEdit()
+    await loadTrainings()
+    notice.value = '이 교육의 대상자 명단에서 삭제했습니다.'
+  } catch (error) {
+    apiError.value = error.message
+  } finally {
+    saving.value = false
+  }
+}
+
+export async function uploadParticipants(file) {
+  if (!selectedTraining.value || !file) return false
+  uploading.value = true
+  apiError.value = ''
+  try {
+    const result = await uploadParticipantsRequest(selectedTraining.value.id, file)
+    selectedTraining.value.participants = result.participants.map((person) => ({
+      ...person,
+      attended: attendanceOverrides[person.id] ?? person.attended,
+    }))
+    selectedTraining.value.participant_count = result.participants.length
+    notice.value = `${result.added}명 등록, ${result.skipped}명 중복 건너뜀`
+    return true
+  } catch (error) {
+    apiError.value = error.message
+    return false
+  } finally {
+    uploading.value = false
+  }
 }
 
 export function toggleAttendance(person) {
   person.attended = !person.attended
+  saveAttendance(person)
   notice.value = `${person.name}님의 출석을 ${person.attended ? '확인' : '취소'}했습니다.`
 }
 
@@ -206,6 +287,7 @@ export function checkIn() {
     return
   }
   person.attended = true
+  saveAttendance(person)
   attendeeError.value = ''
   attendeeStep.value = 'done'
 }

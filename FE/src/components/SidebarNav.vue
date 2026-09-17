@@ -14,6 +14,6 @@ import { section, openSection } from '../composables/useDemoStore'
         <button :class="{ active: section === 'attendance' }" @click="openSection('attendance')"><span>✓</span> 출석 관리</button>
         <button :class="{ active: section === 'reports' }" @click="openSection('reports')"><span>▧</span> 결과 보고서</button>
       </nav>
-      <div class="sidebar-bottom"><span class="status-dot"></span> 교육 정보 서버 저장 <small>대상자·출석은 브라우저에 저장됩니다</small></div>
+      <div class="sidebar-bottom"><span class="status-dot"></span> 교육·대상자 서버 저장 <small>출석 데모는 브라우저에 저장됩니다</small></div>
     </aside>
 </template>

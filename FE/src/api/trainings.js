@@ -35,3 +35,23 @@ export async function fetchTrainings() {
 export const createTrainingRequest = (payload) => writeRequest(baseUrl, 'POST', payload)
 export const updateTrainingRequest = (id, payload) => writeRequest(`${baseUrl}${id}/`, 'PUT', payload)
 export const deleteTrainingRequest = (id) => writeRequest(`${baseUrl}${id}/`, 'DELETE')
+
+export const createParticipantRequest = (trainingId, payload) =>
+  writeRequest(`${baseUrl}${trainingId}/participants/`, 'POST', payload)
+
+export const updateParticipantRequest = (trainingId, participantId, payload) =>
+  writeRequest(`${baseUrl}${trainingId}/participants/${participantId}/`, 'PUT', payload)
+
+export const deleteParticipantRequest = (trainingId, participantId) =>
+  writeRequest(`${baseUrl}${trainingId}/participants/${participantId}/`, 'DELETE')
+
+export async function uploadParticipantsRequest(trainingId, file) {
+  await request('/api/csrf/')
+  const body = new FormData()
+  body.append('file', file)
+  return request(`${baseUrl}${trainingId}/participants/upload/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfCookie() },
+    body,
+  })
+}

@@ -26,3 +26,14 @@
 .table-action.danger{color:#c55a5a;border-color:#f0d7d7}
 .table-action.danger:hover{background:#fff3f3}
 @media(max-width:700px){.training-list .training-row{align-items:stretch;flex-wrap:wrap;padding-bottom:9px}.training-open{flex-basis:100%;flex-wrap:wrap}.training-actions{margin-left:48px}.training-open .training-info{flex-basis:calc(100% - 55px)}}
+
+.participant-panel{margin-bottom:17px}
+.participant-panel .inline-form input{min-width:120px;flex:1}
+.participant-panel .inline-form input:first-child{max-width:160px}
+.template-link{white-space:nowrap;text-decoration:none}
+.upload-form{display:flex;align-items:center;gap:12px;padding:0 22px 8px}
+.upload-form input{flex:1;min-width:0;border:1px dashed #bfd3ed;border-radius:8px;background:#f8fbff;padding:10px;color:#536b8b;font-size:11px}
+.upload-help{margin:0;padding:0 22px 20px;color:#98a7ba;font-size:10px}
+.participant-actions{white-space:nowrap}
+.participant-actions .table-action+.table-action{margin-left:5px}
+@media(max-width:700px){.upload-form{flex-direction:column;align-items:stretch}.participant-panel .inline-form input:first-child{max-width:none}}
