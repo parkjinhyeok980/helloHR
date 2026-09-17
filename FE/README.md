@@ -1,5 +1,19 @@
-# Vue 3 + Vite
+# hello,HRD 프런트엔드
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Vue 3와 Vite로 만든 교육 운영 MVP 화면입니다. `docsimg`의 관리자 화면과 모바일 참여자 흐름을 참고했습니다.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## 실행
+
+```bash
+npm ci
+npm run dev
+```
+
+## 데모 흐름
+
+1. 교육 관리에서 교육을 만듭니다.
+2. 대상자 관리에서 이름과 부서를 등록합니다.
+3. 출석 관리에서 참석 여부를 확인하거나, 상단의 **참여자 화면 보기**에서 이름과 교육별 4자리 출석 코드를 입력합니다.
+4. 결과 보고서에서 참석/미참석 현황을 확인하고 인쇄 창에서 PDF로 저장합니다.
+
+현재 데이터는 브라우저 `localStorage`에만 저장됩니다. Django API와 QR 출석, 전자서명은 아직 연결되지 않았습니다.
