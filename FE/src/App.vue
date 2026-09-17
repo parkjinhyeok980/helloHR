@@ -1,5 +1,5 @@
 <script setup>
-import { mode, section, notice, attendeeStep } from './composables/useDemoStore'
+import { mode, section, notice, attendeeStep, apiError, loading, loadTrainings } from './composables/useDemoStore'
 import SidebarNav from './components/SidebarNav.vue'
 import DashboardView from './components/DashboardView.vue'
 import TrainingsView from './components/TrainingsView.vue'
@@ -34,6 +34,10 @@ function showParticipantView() {
           </div>
         </header>
         <div class="page-content">
+          <div v-if="apiError" class="notice error-notice" role="alert">
+            {{ apiError }} <button @click="loadTrainings">다시 시도</button>
+          </div>
+          <div v-if="loading" class="notice" role="status">교육 목록을 불러오는 중입니다...</div>
           <div v-if="notice" class="notice" role="status">
             {{ notice }}<button aria-label="닫기" @click="notice = ''">×</button>
           </div>

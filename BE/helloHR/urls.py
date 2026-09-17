@@ -16,7 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from trainings import views as training_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/csrf/', training_views.csrf_token, name='api-csrf'),
+    path('api/trainings/', training_views.training_list, name='training-list'),
+    path('api/trainings/<int:training_id>/', training_views.training_detail, name='training-detail'),
 ]

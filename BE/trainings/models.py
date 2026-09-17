@@ -1,10 +1,23 @@
 from django.db import models
+from secrets import randbelow
+
+
+def generate_attendance_code():
+    return f'{randbelow(10000):04d}'
 
 
 
 class Training(models.Model):
+    class Category(models.TextChoices):
+        REQUIRED = '법정 필수', '법정 필수'
+        INTERNAL = '사내 교육', '사내 교육'
+        OTHER = '기타', '기타'
+
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    category = models.CharField(max_length=20, choices=Category.choices, default=Category.INTERNAL)
+    location = models.CharField(max_length=200, blank=True)
+    attendance_code = models.CharField(max_length=4, default=generate_attendance_code)
     starts_at = models.DateTimeField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
 
