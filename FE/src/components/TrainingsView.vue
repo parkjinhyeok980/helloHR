@@ -1,0 +1,10 @@
+<script setup>
+import { trainings, filteredTrainings, search, showCreateForm, newTraining, createTraining, formatDate, selectTraining } from '../composables/useDemoStore'
+
+</script>
+
+<template>
+          <div class="page-heading"><div><span class="eyebrow">TRAININGS</span><h1>교육 관리</h1><p>교육을 만들고 대상자를 연결하세요.</p></div><button class="primary-button" @click="showCreateForm = !showCreateForm">＋ 새 교육 만들기</button></div>
+          <form v-if="showCreateForm" class="panel form-panel" @submit.prevent="createTraining"><div class="panel-header"><div><h3>새 교육 만들기</h3><p>필수 항목을 입력해 교육을 등록합니다.</p></div></div><div class="form-grid"><label>교육명 <span>*</span><input v-model="newTraining.title" required placeholder="예: 산업안전보건교육"></label><label>교육 유형<select v-model="newTraining.category"><option>법정 필수</option><option>사내 교육</option><option>기타</option></select></label><label>교육일 <span>*</span><input v-model="newTraining.date" type="date" required></label><label>시작 시간<input v-model="newTraining.time" type="time"></label><label class="full-width">장소<input v-model="newTraining.location" placeholder="예: 본관 3층 대회의실"></label></div><div class="form-actions"><button type="button" class="outline-button" @click="showCreateForm = false">취소</button><button type="submit" class="primary-button">교육 등록</button></div></form>
+          <section class="panel"><div class="panel-header"><div><h3>교육 목록 <span class="count-pill">{{ trainings.length }}</span></h3><p>교육을 선택하면 대상자와 출석을 관리할 수 있습니다.</p></div><input v-model="search" class="search-input" placeholder="교육명 검색" aria-label="교육명 검색"></div><div class="training-list"><button v-for="item in filteredTrainings" :key="item.id" class="training-row" @click="selectTraining(item.id, 'participants')"><span class="training-icon">▤</span><span class="training-info"><b>{{ item.title }}</b><small>{{ formatDate(item.date) }} {{ item.time }} · {{ item.location }}</small></span><span class="type-chip">{{ item.category }}</span><span class="row-count">{{ item.participants.length }}명</span><span class="chevron">›</span></button><div v-if="!filteredTrainings.length" class="empty-state">검색 결과가 없습니다.</div></div></section>
+</template>
