@@ -23,7 +23,11 @@ $env:DATABASE_URL = '<production PostgreSQL URL>'
 pip install -r requirements.txt
 cd BE
 python manage.py migrate
+python manage.py seed_demo
 ```
+
+`seed_demo` adds sample trainings and participants. Skip it if you want an
+empty production database and will create trainings yourself.
 
 Check `/api/csrf/` after deployment. It should return JSON. The application
 uses local file storage for uploads; persistent uploads require an external

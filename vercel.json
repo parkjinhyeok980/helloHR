@@ -5,6 +5,6 @@
   "buildCommand": "cd FE && npm run build",
   "outputDirectory": "FE/dist",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index.py" }
+    { "source": "/api/:path*", "destination": "/api" }
   ]
 }
