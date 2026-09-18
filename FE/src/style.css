@@ -243,6 +243,11 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 .report-signature { display:block; width:160px; height:64px; max-width:100%; background:white; }
 .report-signed-time, .report-person-number { display:block; font-size:10px; color:var(--muted); margin-top:4px; }
 .report-unsigned { color:var(--muted); font-size:12px; }
+.participant-summary { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.participant-summary .detail-card:first-child strong { font-size:20px; }
+@media(max-width:1280px) { .participant-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:700px) { .participant-summary .detail-card:first-child { grid-column:auto; } }
+@media(max-width:425px) { .participant-summary { grid-template-columns:1fr; } }
 @media print {
   .signed-report-table { table-layout:fixed; }
   .signed-report-table th, .signed-report-table td { padding:8px 10px; overflow-wrap:anywhere; }

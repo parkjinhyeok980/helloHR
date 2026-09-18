@@ -10,7 +10,6 @@ const sectionNames = {
   dashboard: '대시보드',
   trainings: '교육 관리',
   participants: '대상자 관리',
-  attendance: '출석 관리',
   reports: '결과 보고서',
 }
 

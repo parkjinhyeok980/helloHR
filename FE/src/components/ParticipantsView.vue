@@ -4,6 +4,7 @@ import {
   selectedTraining, newParticipant, editingParticipantId, saveParticipant,
   startEditParticipant, cancelParticipantEdit, removeParticipant,
   uploadParticipants, saving, uploading, formatDate,
+  selectedPresent, selectedRate, toggleAttendance, loadTrainings, loading,
 } from '../composables/useDemoStore'
 
 const selectedFile = ref(null)
@@ -24,7 +25,7 @@ async function submitFile() {
 </script>
 
 <template>
-  <div class="detail-grid">
+  <div class="detail-grid participant-summary">
     <div class="panel detail-card">
       <span>교육 일정</span>
       <strong>{{ formatDate(selectedTraining.date) }}</strong>
@@ -36,9 +37,14 @@ async function submitFile() {
       <small>이 교육에 연결된 대상자</small>
     </div>
     <div class="panel detail-card">
-      <span>출석 코드</span>
-      <strong>{{ selectedTraining.code }}</strong>
-      <small>참여자 화면에서 입력</small>
+      <span>출석 완료</span>
+      <strong>{{ selectedPresent }}명</strong>
+      <small>미참석 {{ selectedTraining.participants.length - selectedPresent }}명</small>
+    </div>
+    <div class="panel detail-card">
+      <span>출석률</span>
+      <strong>{{ selectedRate }}%</strong>
+      <div class="progress"><span :style="{ width: `${selectedRate}%` }"></span></div>
     </div>
   </div>
 
@@ -75,17 +81,25 @@ async function submitFile() {
 
   <section class="panel">
     <div class="panel-header">
-      <div><h3>대상자 명단 <span class="count-pill">{{ selectedTraining.participants.length }}</span></h3></div>
+      <div>
+        <h3>대상자 명단 및 출석 <span class="count-pill">{{ selectedTraining.participants.length }}</span></h3>
+        <p>대상자 정보와 출석을 관리하고 전자서명 여부를 확인하세요.</p>
+      </div>
+      <button class="outline-button" :disabled="loading || saving || uploading" @click="loadTrainings">{{ loading ? '불러오는 중…' : '명단·출석 새로고침' }}</button>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>사번</th><th>이름</th><th>부서</th><th>출석</th><th>관리</th></tr></thead>
+        <thead><tr><th>사번</th><th>이름</th><th>부서</th><th>출석</th><th>전자서명</th><th>출석 처리</th><th>대상자 관리</th></tr></thead>
         <tbody>
           <tr v-for="person in selectedTraining.participants" :key="person.id">
             <td>{{ person.employee_number }}</td>
             <td class="name-cell">{{ person.name }}</td>
             <td>{{ person.department }}</td>
             <td><span class="badge" :class="person.attended ? 'success' : 'neutral'">{{ person.attended ? '참석' : '미참석' }}</span></td>
+            <td><span class="badge" :class="person.signed ? 'success' : 'neutral'">{{ person.signed ? '서명 완료' : '미서명' }}</span></td>
+            <td class="participant-actions">
+              <button class="table-action" type="button" :disabled="saving || loading || uploading" :aria-label="`${person.name} ${person.attended ? '출석 취소' : '출석 확인'}`" @click="toggleAttendance(person)">{{ person.attended ? '출석 취소' : '출석 확인' }}</button>
+            </td>
             <td class="participant-actions">
               <button class="table-action" type="button" :disabled="saving" :aria-label="`${person.name} 수정`" @click="startEditParticipant(person)">수정</button>
               <button class="table-action danger" type="button" :disabled="saving" :aria-label="`${person.name} 삭제`" @click="removeParticipant(person)">삭제</button>
