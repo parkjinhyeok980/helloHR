@@ -4,7 +4,8 @@
   "installCommand": "cd FE && npm ci",
   "buildCommand": "cd FE && npm run build",
   "outputDirectory": "FE/dist",
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/api" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api?__django_path=$1" },
+    { "handle": "filesystem" }
   ]
 }
