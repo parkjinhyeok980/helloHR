@@ -26,7 +26,7 @@ function showParticipantView() {
       <SidebarNav />
       <main class="main-area">
         <header class="topbar">
-          <div class="breadcrumb">워크스페이스 <span>/</span> {{ sectionNames[section] }}</div>
+          <div class="breadcrumb">{{ sectionNames[section] }}</div>
           <div class="top-actions">
             <button class="mode-link" @click="showParticipantView">참여자 화면 보기 ↗</button>
             <div class="avatar">관</div>
