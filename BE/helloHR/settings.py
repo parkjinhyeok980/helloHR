@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_i7^t*5-_nklgqfis=zj$v&89ompduk%@4thx(fv79dw1x-=%o'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-_i7^t*5-_nklgqfis=zj$v&89ompduk%@4thx(fv79dw1x-=%o')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = not bool(os.environ.get('VERCEL'))
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['.vercel.app', *filter(None, os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(','))]
 
 
 # Application definition
@@ -84,6 +85,14 @@ DATABASES = {
     }
 }
 
+if os.environ.get('VERCEL') and not os.environ.get('DATABASE_URL'):
+    raise RuntimeError('DATABASE_URL must be set to a persistent PostgreSQL database on Vercel')
+
+if os.environ.get('DATABASE_URL'):
+    import dj_database_url
+
+    DATABASES['default'] = dj_database_url.config(conn_max_age=0, conn_health_checks=True)
+
 
 # Password validation
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
@@ -112,7 +121,12 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Seoul'
 
 # Vite 개발 서버에서 프록시를 통해 전달되는 요청의 Origin.
-CSRF_TRUSTED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://*.vercel.app',
+    *filter(None, os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',')),
+]
 
 USE_I18N = True
 

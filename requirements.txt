@@ -1,0 +1,3 @@
+-r BE/requirements.txt
+dj-database-url==3.0.1
+psycopg[binary]==3.2.10
