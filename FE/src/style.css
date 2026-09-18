@@ -216,3 +216,25 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { button { transition: none; } }
 @media print { .page-content, .report-sheet { padding: 0; } .report-sheet { box-shadow: none; border: 0; } }
+
+.training-access { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:24px; margin-bottom:24px; }
+.access-details { min-width:0; flex:1; }
+.access-details h3 { font-size:22px; margin:8px 0; }
+.access-details p { font-size:13px; color:var(--muted); margin:8px 0; }
+.attendance-code { display:block; color:var(--brand-deep); font-size:36px; letter-spacing:8px; margin:12px 0; font-variant-numeric:tabular-nums; }
+.access-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.access-actions a { text-decoration:none; }
+.access-link { width:100%; max-width:560px; font-size:12px; color:var(--muted); padding:10px 0; border:0; background:transparent; }
+.access-qr { flex:none; text-align:center; max-width:200px; }
+.access-qr img { display:block; background:white; width:160px; height:160px; }
+.access-qr small { color:var(--muted); font-size:12px; }
+.mobile-form fieldset { border:0; padding:0; margin:0; min-width:0; display:grid; gap:20px; }
+.signature-heading { display:flex; align-items:center; justify-content:space-between; font-size:14px; font-weight:600; }
+.signature-surface { position:relative; height:160px; background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.signature-surface svg { display:block; width:100%; height:100%; touch-action:none; cursor:crosshair; }
+.signature-placeholder { position:absolute; inset:0; display:grid; place-items:center; pointer-events:none; color:var(--muted); font-size:13px; }
+.signature-field p { font-size:12px; line-height:1.6; color:var(--muted); margin:8px 0 0; }
+.report-actions .stat-icon { position:static; }
+@media(max-width:640px) { .training-access { flex-direction:column-reverse; align-items:stretch; padding:20px; } .access-qr { align-self:center; } }
+@media(max-width:425px) { .participant-page .phone-shell { width:100%; border:0; border-radius:0; margin:0; min-height:calc(100vh - 68px); } }
+@media print { .training-access { display:none; } }

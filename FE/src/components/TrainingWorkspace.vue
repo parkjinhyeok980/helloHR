@@ -4,6 +4,7 @@ import { trainings, selectedId, selectedTraining, formatDate } from '../composab
 import ParticipantsView from './ParticipantsView.vue'
 import AttendanceView from './AttendanceView.vue'
 import ReportsView from './ReportsView.vue'
+import TrainingAccess from './TrainingAccess.vue'
 
 const props = defineProps({ section: { type: String, required: true } })
 const current = computed(() => ({
@@ -29,7 +30,10 @@ const current = computed(() => ({
     <span>{{ formatDate(selectedTraining?.date) }}</span>
   </div>
   <div v-if="!selectedTraining" class="panel empty-state">먼저 교육을 만들어 주세요.</div>
-  <ParticipantsView v-else-if="section === 'participants'" />
-  <AttendanceView v-else-if="section === 'attendance'" />
-  <ReportsView v-else />
+  <template v-else>
+    <TrainingAccess v-if="section !== 'reports'" :training="selectedTraining" />
+    <ParticipantsView v-if="section === 'participants'" />
+    <AttendanceView v-else-if="section === 'attendance'" />
+    <ReportsView v-else />
+  </template>
 </template>

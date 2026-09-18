@@ -17,6 +17,7 @@ def serialize_participant(participant):
         'name': participant.employee.name,
         'department': participant.employee.department.name,
         'attended': any(record.status == 'present' for record in participant.attendance_records.all()),
+        'signed': any(record.status == 'present' and hasattr(record, 'signature') for record in participant.attendance_records.all()),
     }
 
 
@@ -88,7 +89,7 @@ def csrf_token(request):
 def training_list(request):
     if request.method == 'GET':
         trainings = Training.objects.prefetch_related(
-            'participants__employee__department', 'participants__attendance_records'
+            'participants__employee__department', 'participants__attendance_records__signature'
         ).order_by('-starts_at', '-id')
         return JsonResponse({'results': [serialize_training(item) for item in trainings]})
 

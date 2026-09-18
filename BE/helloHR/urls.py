@@ -18,10 +18,13 @@ from django.contrib import admin
 from django.urls import path
 from trainings import views as training_views
 from trainings import participants as participant_views
+from attendance import views as attendance_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/csrf/', training_views.csrf_token, name='api-csrf'),
+    path('api/trainings/<int:training_id>/check-in/', attendance_views.check_in, name='check-in'),
+    path('api/participants/<int:participant_id>/attendance/', attendance_views.set_attendance, name='set-attendance'),
     path('api/trainings/', training_views.training_list, name='training-list'),
     path('api/trainings/<int:training_id>/', training_views.training_detail, name='training-detail'),
     path('api/trainings/<int:training_id>/participants/', participant_views.participant_list, name='participant-list'),

@@ -1,6 +1,8 @@
 import { computed, ref, watch } from 'vue'
 import {
   fetchTrainings,
+  checkInRequest,
+  setAttendanceRequest,
   createTrainingRequest,
   updateTrainingRequest,
   deleteTrainingRequest,
@@ -10,29 +12,7 @@ import {
   uploadParticipantsRequest,
 } from '../api/trainings'
 
-const attendanceStorageKey = 'hellohr-attendance-v1'
-
-function readLocalAttendance() {
-  try {
-    return JSON.parse(localStorage.getItem(attendanceStorageKey)) ?? {}
-  } catch {
-    return {}
-  }
-}
-
-const attendanceOverrides = readLocalAttendance()
-const withLocalAttendance = (training) => ({
-  ...training,
-  participants: training.participants.map((person) => ({
-    ...person,
-    attended: attendanceOverrides[person.id] ?? person.attended,
-  })),
-})
-
-function saveAttendance(person) {
-  attendanceOverrides[person.id] = person.attended
-  localStorage.setItem(attendanceStorageKey, JSON.stringify(attendanceOverrides))
-}
+const linkedTrainingId = Number(new URLSearchParams(window.location.search).get('training')) || null
 
 export const trainings = ref([])
 export const loading = ref(false)
@@ -40,7 +20,7 @@ export const saving = ref(false)
 export const uploading = ref(false)
 export const apiError = ref('')
 export const section = ref('dashboard')
-export const mode = ref('admin')
+export const mode = ref(linkedTrainingId ? 'participant' : 'admin')
 export const selectedId = ref(null)
 export const showCreateForm = ref(false)
 export const editingId = ref(null)
@@ -55,8 +35,9 @@ const emptyTraining = () => ({
 export const newTraining = ref(emptyTraining())
 export const newParticipant = ref({ employee_number: '', name: '', department: '' })
 export const editingParticipantId = ref(null)
-export const attendee = ref({ trainingId: null, name: '', code: '' })
-export const attendeeStep = ref('list')
+export const attendee = ref({ trainingId: linkedTrainingId, name: '', employee_number: '', code: '', signature: [] })
+export const attendeeStep = ref(linkedTrainingId ? 'checkin' : 'list')
+export const checkingIn = ref(false)
 export const attendeeError = ref('')
 
 watch(selectedId, () => cancelParticipantEdit())
@@ -83,11 +64,11 @@ export async function loadTrainings() {
   loading.value = true
   apiError.value = ''
   try {
-    trainings.value = (await fetchTrainings()).map(withLocalAttendance)
+    trainings.value = await fetchTrainings()
     if (!trainings.value.some((item) => item.id === selectedId.value)) {
       selectedId.value = trainings.value[0]?.id ?? null
     }
-    if (!trainings.value.some((item) => item.id === attendee.value.trainingId)) {
+    if (!attendee.value.trainingId) {
       attendee.value.trainingId = trainings.value[0]?.id ?? null
     }
   } catch (error) {
@@ -230,8 +211,6 @@ export async function removeParticipant(person) {
   apiError.value = ''
   try {
     await deleteParticipantRequest(selectedTraining.value.id, person.id)
-    delete attendanceOverrides[person.id]
-    localStorage.setItem(attendanceStorageKey, JSON.stringify(attendanceOverrides))
     if (editingParticipantId.value === person.id) cancelParticipantEdit()
     await loadTrainings()
     notice.value = '이 교육의 대상자 명단에서 삭제했습니다.'
@@ -248,10 +227,7 @@ export async function uploadParticipants(file) {
   apiError.value = ''
   try {
     const result = await uploadParticipantsRequest(selectedTraining.value.id, file)
-    selectedTraining.value.participants = result.participants.map((person) => ({
-      ...person,
-      attended: attendanceOverrides[person.id] ?? person.attended,
-    }))
+    selectedTraining.value.participants = result.participants
     selectedTraining.value.participant_count = result.participants.length
     notice.value = `${result.added}명 등록, ${result.skipped}명 중복 건너뜀`
     return true
@@ -263,33 +239,39 @@ export async function uploadParticipants(file) {
   }
 }
 
-export function toggleAttendance(person) {
-  person.attended = !person.attended
-  saveAttendance(person)
-  notice.value = `${person.name}님의 출석을 ${person.attended ? '확인' : '취소'}했습니다.`
+export async function toggleAttendance(person) {
+  if (saving.value) return
+  saving.value = true
+  apiError.value = ''
+  try {
+    Object.assign(person, await setAttendanceRequest(person.id, !person.attended))
+  } catch (error) {
+    apiError.value = error.message
+  } finally {
+    saving.value = false
+  }
 }
 
 export function startCheckIn(trainingId) {
-  attendee.value = { trainingId, name: '', code: '' }
+  attendee.value = { trainingId, name: '', employee_number: '', code: '', signature: [] }
   attendeeError.value = ''
   attendeeStep.value = 'checkin'
 }
 
-export function checkIn() {
-  const training = attendeeTraining.value
-  const person = training?.participants.find((item) => item.name === attendee.value.name.trim())
-  if (!person) {
-    attendeeError.value = '등록된 대상자 이름을 확인해 주세요.'
-    return
-  }
-  if (attendee.value.code.trim() !== training.code) {
-    attendeeError.value = '출석 코드가 일치하지 않습니다.'
-    return
-  }
-  person.attended = true
-  saveAttendance(person)
+export async function checkIn() {
+  if (checkingIn.value || !attendeeTraining.value) return
+  checkingIn.value = true
   attendeeError.value = ''
-  attendeeStep.value = 'done'
+  try {
+    const person = await checkInRequest(attendeeTraining.value.id, attendee.value)
+    const index = attendeeTraining.value.participants.findIndex((item) => item.id === person.id)
+    if (index !== -1) attendeeTraining.value.participants[index] = person
+    attendeeStep.value = 'done'
+  } catch (error) {
+    attendeeError.value = error.message
+  } finally {
+    checkingIn.value = false
+  }
 }
 
 loadTrainings()

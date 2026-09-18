@@ -1,5 +1,16 @@
 # Vercel deployment
 
+After updating the signed attendance feature, run `python manage.py migrate`
+against the deployment database before deploying the new application. Migration
+`attendance.0002_signature_strokes` stores normalized handwritten strokes in the
+database, so this feature does not depend on Vercel's temporary file storage.
+Existing browser-only attendance demo records are not imported into the database.
+
+Training QR images encode the current site's origin and `?training=<id>`.
+Generate shared QR images on the deployed site; localhost QR links only work on
+the computer hosting the development server. QR rendering uses the browser API
+documented by [node-qrcode](https://github.com/soldair/node-qrcode#browser).
+
 Set the Vercel project's Root Directory to the repository root. The root
 `vercel.json` builds the Vue app from `FE/` and routes `/api/*` to the Django
 function in `api/index.py`.

@@ -26,6 +26,7 @@ class Signature(models.Model):
         Attendance, on_delete=models.CASCADE, related_name='signature'
     )
     file = models.FileField(upload_to='signatures/')
+    strokes = models.JSONField(default=list, blank=True)
     signed_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
