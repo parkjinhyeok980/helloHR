@@ -238,3 +238,17 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 @media(max-width:640px) { .training-access { flex-direction:column-reverse; align-items:stretch; padding:20px; } .access-qr { align-self:center; } }
 @media(max-width:425px) { .participant-page .phone-shell { width:100%; border:0; border-radius:0; margin:0; min-height:calc(100vh - 68px); } }
 @media print { .training-access { display:none; } }
+
+.signed-report-table .report-signature-cell { padding:10px 16px; min-width:170px; }
+.report-signature { display:block; width:160px; height:64px; max-width:100%; background:white; }
+.report-signed-time, .report-person-number { display:block; font-size:10px; color:var(--muted); margin-top:4px; }
+.report-unsigned { color:var(--muted); font-size:12px; }
+@media print {
+  .signed-report-table { table-layout:fixed; }
+  .signed-report-table th, .signed-report-table td { padding:8px 10px; overflow-wrap:anywhere; }
+  .signed-report-table th:last-child { width:190px; }
+  .signed-report-table tr { break-inside:avoid; page-break-inside:avoid; }
+  .signed-report-table thead { display:table-header-group; }
+  .report-sheet .table-wrap { border-radius:0; }
+  .report-signature { break-inside:avoid; }
+}

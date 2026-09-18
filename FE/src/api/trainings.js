@@ -35,6 +35,7 @@ export async function fetchTrainings() {
 export const createTrainingRequest = (payload) => writeRequest(baseUrl, 'POST', payload)
 export const updateTrainingRequest = (id, payload) => writeRequest(`${baseUrl}${id}/`, 'PUT', payload)
 export const deleteTrainingRequest = (id) => writeRequest(`${baseUrl}${id}/`, 'DELETE')
+export const fetchTrainingReport = (id) => request(`${baseUrl}${id}/report/`, { cache: 'no-store' })
 export const checkInRequest = (id, payload) => writeRequest(`${baseUrl}${id}/check-in/`, 'POST', payload)
 export const setAttendanceRequest = (id, attended) => writeRequest(`/api/participants/${id}/attendance/`, 'POST', { attended })
 
