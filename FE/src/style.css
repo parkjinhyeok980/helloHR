@@ -250,5 +250,5 @@ input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
   .signed-report-table tr { break-inside:avoid; page-break-inside:avoid; }
   .signed-report-table thead { display:table-header-group; }
   .report-sheet .table-wrap { border-radius:0; }
-  .report-signature { break-inside:avoid; }
+  .report-signature { display:block!important; visibility:visible!important; width:160px; height:64px; object-fit:contain; break-inside:avoid; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
 }
