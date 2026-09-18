@@ -27,6 +27,8 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-_i7^t*5-_nklgq
 DEBUG = not bool(os.environ.get('VERCEL'))
 
 ALLOWED_HOSTS = ['.vercel.app', *filter(None, os.environ.get('DJANGO_ALLOWED_HOSTS', '').split(','))]
+if DEBUG:
+    ALLOWED_HOSTS += ['localhost', '127.0.0.1', '[::1]']
 
 
 # Application definition
