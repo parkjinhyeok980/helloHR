@@ -80,10 +80,10 @@ function goToToday() {
           <div class="page-heading"><div><span class="eyebrow">OVERVIEW</span><h1>교육 운영 현황</h1><p>교육부터 출석, 결과까지 한눈에 확인하세요.</p></div><button class="primary-button" @click="openSection('trainings'); showCreateForm = true">＋ 새 교육 만들기</button></div>
           <div class="hero-card"><div><span class="hero-kicker">BETTER PEOPLE, BRIGHTER TOMORROW</span><h2>더 간편한 교육 운영,<br>더 정확한 출석 관리.</h2><p>오늘의 교육 현황을 확인하고 다음 업무를 시작하세요.</p><button @click="openSection('trainings')">교육 목록 보기 <span>→</span></button></div><div class="hero-art" aria-hidden="true"><div class="hero-circle circle-one"></div><div class="hero-circle circle-two"></div><div class="floating-note"><span>✓</span><div><b>출석 확인 완료</b><small>교육 운영을 한 곳에서</small></div></div></div></div>
           <div class="stats-grid">
-            <button type="button" class="stat-card stat-link" title="교육 관리로 이동" @click="openSection('trainings')"><span class="stat-icon blue" aria-hidden="true">▤</span><span class="stat-label">전체 교육</span><strong>{{ trainings.length }}<small>건</small></strong><span class="stat-foot">등록된 교육 과정</span></button>
-            <button type="button" class="stat-card stat-link" title="대상자 관리로 이동" @click="openSection('participants')"><span class="stat-icon mint" aria-hidden="true">♧</span><span class="stat-label">등록 대상자</span><strong>{{ totalParticipants }}<small>명</small></strong><span class="stat-foot">전체 교육 기준</span></button>
-            <button type="button" class="stat-card stat-link" title="대상자 관리에서 출석 확인" @click="openSection('participants')"><span class="stat-icon amber" aria-hidden="true">✓</span><span class="stat-label">출석 완료</span><strong>{{ totalAttended }}<small>명</small></strong><span class="stat-foot">확인된 출석 기록</span></button>
-            <button type="button" class="stat-card stat-link" title="결과 보고서로 이동" @click="openSection('reports')"><span class="stat-icon violet" aria-hidden="true">◔</span><span class="stat-label">전체 출석률</span><strong>{{ attendanceRate }}<small>%</small></strong><span class="stat-foot">등록 대상자 대비</span></button>
+            <button type="button" class="stat-card stat-link" title="교육 관리로 이동" @click="openSection('trainings')"><span class="stat-icon education-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v6c3 3 9 3 12 0v-6M22 9v7"/></svg></span><span class="stat-label">전체 교육</span><strong>{{ trainings.length }}<small>건</small></strong><span class="stat-foot">등록된 교육 과정</span></button>
+            <button type="button" class="stat-card stat-link" title="대상자 관리로 이동" @click="openSection('participants')"><span class="stat-icon people-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg></span><span class="stat-label">등록 대상자</span><strong>{{ totalParticipants }}<small>명</small></strong><span class="stat-foot">전체 교육 기준</span></button>
+            <button type="button" class="stat-card stat-link" title="대상자 관리에서 출석 확인" @click="openSection('participants')"><span class="stat-icon attendance-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></span><span class="stat-label">출석 완료</span><strong>{{ totalAttended }}<small>명</small></strong><span class="stat-foot">확인된 출석 기록</span></button>
+            <button type="button" class="stat-card stat-link" title="결과 보고서로 이동" @click="openSection('reports')"><span class="stat-icon rate-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9V3Z"/><path d="M16 3.9a9 9 0 0 1 4.1 4.1H16V3.9Z"/></svg></span><span class="stat-label">전체 출석률</span><strong>{{ attendanceRate }}<small>%</small></strong><span class="stat-foot">등록 대상자 대비</span></button>
           </div>
           <div class="dashboard-grid dashboard-overview">
             <section class="panel"><div class="panel-header"><div><h3>교육별 출석률</h3><p>교육별 등록 대상자 대비 출석 현황</p></div><span class="small-tag">LIVE</span></div><div v-if="chartValues.length" class="chart"><div v-for="(bar, index) in chartValues" :key="index" class="chart-column"><div class="chart-track"><div class="chart-fill" :style="{ height: `${Math.max(bar.value, 3)}%` }"><span>{{ bar.value }}%</span></div></div><span class="chart-label">{{ bar.label }}</span></div></div><div v-else class="empty-state">등록된 교육이 없습니다.</div></section>
@@ -129,6 +129,11 @@ function goToToday() {
 </template>
 
 <style scoped>
+.stat-icon svg { display: block; width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.education-icon { color: var(--brand); background: var(--brand-subtle); }
+.people-icon { color: #4774c4; background: #edf2fc; }
+.attendance-icon { color: #149e61; background: #e8f5ee; }
+.rate-icon { color: #b58127; background: #fbf3e3; }
 .stat-link { appearance: none; width: 100%; text-align: left; color: var(--ink); }
 .stat-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .dashboard-overview { grid-template-columns: minmax(0, 1fr) minmax(260px, .9fr) minmax(0, 1.2fr); gap: 20px; }

@@ -52,7 +52,7 @@ import {
     <div class="training-list">
       <div v-for="item in filteredTrainings" :key="item.id" class="training-row">
         <button class="training-open" @click="selectTraining(item.id, 'participants')">
-          <span class="training-icon">▤</span>
+          <span class="training-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v6c3 3 9 3 12 0v-6M22 9v7"/></svg></span>
           <span class="training-info">
             <b>{{ item.title }}</b>
             <small>{{ formatDate(item.date) }} {{ item.time }} · {{ item.location || '장소 미정' }}</small>
@@ -69,3 +69,7 @@ import {
     </div>
   </section>
 </template>
+
+<style scoped>
+.training-icon svg { display: block; width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+</style>
