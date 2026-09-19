@@ -1,4 +1,3 @@
-import json
 import math
 from secrets import compare_digest
 
@@ -8,16 +7,14 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
 
 from trainings.models import Training, TrainingParticipant
-from trainings.views import serialize_participant
+from helloHR.payloads import read_json_object
+from trainings.serializers import serialize_participant
 from .models import Attendance, Signature
 
 
 def read_payload(request):
-    try:
-        data = json.loads(request.body)
-        return data if isinstance(data, dict) else {}
-    except (ValueError, UnicodeDecodeError):
-        return {}
+    data, _ = read_json_object(request)
+    return data if data is not None else {}
 
 
 def valid_signature(strokes):

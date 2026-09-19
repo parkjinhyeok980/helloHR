@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 from django.http import HttpResponse, JsonResponse
@@ -7,44 +6,16 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
+from helloHR.payloads import read_json_object
 from .models import Training
-
-
-def serialize_participant(participant):
-    return {
-        'id': participant.id,
-        'employee_number': participant.employee.employee_number,
-        'name': participant.employee.name,
-        'department': participant.employee.department.name,
-        'attended': any(record.status == 'present' for record in participant.attendance_records.all()),
-        'signed': any(record.status == 'present' and hasattr(record, 'signature') for record in participant.attendance_records.all()),
-    }
-
-
-def serialize_training(training):
-    starts_at = timezone.localtime(training.starts_at) if training.starts_at else None
-    participants = list(training.participants.all())
-    return {
-        'id': training.id,
-        'title': training.title,
-        'description': training.description,
-        'category': training.category,
-        'date': starts_at.strftime('%Y-%m-%d') if starts_at else '',
-        'time': starts_at.strftime('%H:%M') if starts_at else '',
-        'location': training.location,
-        'code': training.attendance_code,
-        'participant_count': len(participants),
-        'participants': [serialize_participant(item) for item in participants],
-    }
+from .queries import training_queryset
+from .serializers import serialize_training
 
 
 def parse_payload(request):
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return None, {'body': '올바른 JSON을 보내 주세요.'}
-    if not isinstance(data, dict):
-        return None, {'body': '객체 형식의 데이터를 보내 주세요.'}
+    data, errors = read_json_object(request)
+    if errors:
+        return None, errors
 
     errors = {}
     title = data.get('title')
@@ -88,9 +59,7 @@ def csrf_token(request):
 @require_http_methods(['GET', 'POST'])
 def training_list(request):
     if request.method == 'GET':
-        trainings = Training.objects.prefetch_related(
-            'participants__employee__department', 'participants__attendance_records__signature'
-        ).order_by('-starts_at', '-id')
+        trainings = training_queryset().order_by('-starts_at', '-id')
         return JsonResponse({'results': [serialize_training(item) for item in trainings]})
 
     fields, errors = parse_payload(request)
@@ -102,7 +71,8 @@ def training_list(request):
 
 @require_http_methods(['GET', 'PUT', 'DELETE'])
 def training_detail(request, training_id):
-    training = get_object_or_404(Training, pk=training_id)
+    queryset = Training.objects.all() if request.method == 'DELETE' else training_queryset()
+    training = get_object_or_404(queryset, pk=training_id)
     if request.method == 'GET':
         return JsonResponse(serialize_training(training))
     if request.method == 'DELETE':

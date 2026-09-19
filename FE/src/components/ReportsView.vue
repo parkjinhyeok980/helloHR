@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { selectedTraining, formatDate } from '../composables/useDemoStore'
 import { fetchTrainingReport } from '../api/trainings'
 import { signatureImage } from '../utils/signatureImage'
+import { countAttended, percentage } from '../utils/attendance'
 
 const report = ref(null)
 const loading = ref(false)
@@ -10,11 +11,12 @@ const error = ref('')
 const reportSheet = ref(null)
 const printing = ref(false)
 let version = 0
-const present = computed(() => report.value?.participants.filter((person) => person.attended).length ?? 0)
-const rate = computed(() => report.value?.participants.length ? Math.round(present.value / report.value.participants.length * 100) : 0)
-const signedTime = (value) => new Intl.DateTimeFormat('ko-KR', {
+const present = computed(() => countAttended(report.value?.participants))
+const rate = computed(() => percentage(present.value, report.value?.participants.length))
+const signedTimeFormatter = new Intl.DateTimeFormat('ko-KR', {
   timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-}).format(new Date(value))
+})
+const signedTime = (value) => signedTimeFormatter.format(new Date(value))
 
 async function refreshReport() {
   const id = selectedTraining.value?.id

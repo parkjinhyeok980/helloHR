@@ -3,9 +3,11 @@ from io import BytesIO
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from openpyxl import Workbook
 
-from attendance.models import Attendance
+from attendance.models import Attendance, Signature
 from employees.models import Employee
 from .models import Training, TrainingParticipant
 
@@ -63,6 +65,63 @@ class TrainingApiTests(TestCase):
         self.assertIn('title', response.json()['errors'])
         self.assertIn('date', response.json()['errors'])
         self.assertEqual(Training.objects.count(), 0)
+
+    def test_json_validation_is_consistent_across_write_endpoints(self):
+        training = Training.objects.create(title='Validation')
+        path = f'/api/trainings/{training.id}/participants/'
+        person = self.request_json('post', path, {
+            'employee_number': 'E01', 'name': 'Kim', 'department': 'HR',
+        }).json()
+        endpoints = [
+            ('post', '/api/trainings/'),
+            ('put', f'/api/trainings/{training.id}/'),
+            ('post', path),
+            ('put', f'{path}{person["id"]}/'),
+        ]
+        for method, url in endpoints:
+            for body, message in [
+                ('{', '올바른 JSON을 보내 주세요.'),
+                ('[]', '객체 형식의 데이터를 보내 주세요.'),
+                ('null', '객체 형식의 데이터를 보내 주세요.'),
+            ]:
+                with self.subTest(method=method, url=url, body=body):
+                    response = getattr(self.client, method)(
+                        url, data=body, content_type='application/json',
+                        HTTP_X_CSRFTOKEN=self.csrf,
+                    )
+                    self.assertEqual(response.status_code, 400)
+                    self.assertEqual(response.json(), {'errors': {'body': message}})
+
+    def test_read_query_count_does_not_grow_with_participants(self):
+        training = Training.objects.create(title='Query count')
+        path = f'/api/trainings/{training.id}/participants/'
+        urls = ['/api/trainings/', f'/api/trainings/{training.id}/',
+                path, f'/api/trainings/{training.id}/report/']
+
+        def enroll_signed(number):
+            person = self.request_json('post', path, {
+                'employee_number': number, 'name': number, 'department': 'HR',
+            }).json()
+            attendance = Attendance.objects.create(participant_id=person['id'])
+            Signature.objects.create(attendance=attendance, strokes=[[[0, 0], [1, 1]]])
+
+        def query_counts():
+            counts = []
+            for url in urls:
+                with CaptureQueriesContext(connection) as queries:
+                    response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                counts.append(len(queries))
+            return counts
+
+        enroll_signed('E01')
+        baseline = query_counts()
+        for number in range(2, 7):
+            enroll_signed(f'E{number:02}')
+        self.assertEqual(query_counts(), baseline)
+        people = self.client.get(path).json()['results']
+        self.assertEqual(len(people), 6)
+        self.assertTrue(all(person['attended'] and person['signed'] for person in people))
 
     def test_write_requires_csrf_token(self):
         response = self.client.post(

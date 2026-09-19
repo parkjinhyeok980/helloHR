@@ -1,4 +1,3 @@
-import json
 from io import BytesIO
 from zipfile import BadZipFile
 
@@ -12,7 +11,9 @@ from openpyxl.utils.exceptions import InvalidFileException
 from employees.models import Department, Employee
 
 from .models import Training, TrainingParticipant
-from .views import serialize_participant
+from helloHR.payloads import read_json_object
+from .queries import participant_queryset
+from .serializers import serialize_participant
 
 
 HEADERS = {
@@ -50,15 +51,12 @@ def enroll(training, person):
 def participant_list(request, training_id):
     training = get_object_or_404(Training, pk=training_id)
     if request.method == 'GET':
-        people = training.participants.select_related('employee__department').prefetch_related('attendance_records').order_by('id')
+        people = participant_queryset().filter(training=training).order_by('id')
         return JsonResponse({'results': [serialize_participant(item) for item in people]})
 
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({'errors': {'body': '올바른 JSON을 보내 주세요.'}}, status=400)
-    if not isinstance(data, dict):
-        return JsonResponse({'errors': {'body': '객체 형식의 데이터를 보내 주세요.'}}, status=400)
+    data, errors = read_json_object(request)
+    if errors:
+        return JsonResponse({'errors': errors}, status=400)
     person, errors = validate_person(data)
     if errors:
         return JsonResponse({'errors': errors}, status=400)
@@ -78,12 +76,9 @@ def participant_detail(request, training_id, participant_id):
         participant.delete()
         return HttpResponse(status=204)
 
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return JsonResponse({'errors': {'body': '올바른 JSON을 보내 주세요.'}}, status=400)
-    if not isinstance(data, dict):
-        return JsonResponse({'errors': {'body': '객체 형식의 데이터를 보내 주세요.'}}, status=400)
+    data, errors = read_json_object(request)
+    if errors:
+        return JsonResponse({'errors': errors}, status=400)
     person, errors = validate_person(data)
     if errors:
         return JsonResponse({'errors': errors}, status=400)
@@ -168,7 +163,7 @@ def participant_upload(request, training_id):
             added += created
             skipped += not created
 
-    participants = training.participants.select_related('employee__department').prefetch_related('attendance_records').order_by('id')
+    participants = participant_queryset().filter(training=training).order_by('id')
     return JsonResponse({
         'added': added,
         'skipped': skipped,

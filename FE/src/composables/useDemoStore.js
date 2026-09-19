@@ -1,4 +1,5 @@
 import { computed, ref, watch } from 'vue'
+import { countAttended, percentage } from '../utils/attendance'
 import {
   fetchTrainings,
   checkInRequest,
@@ -33,7 +34,8 @@ const emptyTraining = () => ({
 })
 
 export const newTraining = ref(emptyTraining())
-export const newParticipant = ref({ employee_number: '', name: '', department: '' })
+const emptyParticipant = () => ({ employee_number: '', name: '', department: '' })
+export const newParticipant = ref(emptyParticipant())
 export const editingParticipantId = ref(null)
 export const attendee = ref({ trainingId: linkedTrainingId, name: '', employee_number: '', code: '', signature: [] })
 export const attendeeStep = ref(linkedTrainingId ? 'checkin' : 'list')
@@ -45,19 +47,24 @@ watch(selectedId, () => cancelParticipantEdit())
 export const selectedTraining = computed(() => trainings.value.find((item) => item.id === selectedId.value) ?? trainings.value[0])
 export const attendeeTraining = computed(() => trainings.value.find((item) => item.id === attendee.value.trainingId))
 export const totalParticipants = computed(() => trainings.value.reduce((sum, item) => sum + item.participants.length, 0))
-export const totalAttended = computed(() => trainings.value.reduce((sum, item) => sum + item.participants.filter((person) => person.attended).length, 0))
-export const attendanceRate = computed(() => totalParticipants.value ? Math.round(totalAttended.value / totalParticipants.value * 100) : 0)
-export const filteredTrainings = computed(() => trainings.value.filter((item) => item.title.toLowerCase().includes(search.value.toLowerCase())))
-export const selectedPresent = computed(() => selectedTraining.value?.participants.filter((person) => person.attended).length ?? 0)
-export const selectedRate = computed(() => selectedTraining.value?.participants.length ? Math.round(selectedPresent.value / selectedTraining.value.participants.length * 100) : 0)
+export const totalAttended = computed(() => trainings.value.reduce((sum, item) => sum + countAttended(item.participants), 0))
+export const attendanceRate = computed(() => percentage(totalAttended.value, totalParticipants.value))
+export const filteredTrainings = computed(() => {
+  const query = search.value.toLowerCase()
+  return trainings.value.filter((item) => item.title.toLowerCase().includes(query))
+})
+export const selectedPresent = computed(() => countAttended(selectedTraining.value?.participants))
+export const selectedRate = computed(() => percentage(selectedPresent.value, selectedTraining.value?.participants.length))
 export const chartValues = computed(() => trainings.value.slice(0, 5).map((item) => ({
   label: item.title.length > 8 ? `${item.title.slice(0, 8)}…` : item.title,
-  value: item.participants.length ? Math.round(item.participants.filter((person) => person.attended).length / item.participants.length * 100) : 0,
+  value: percentage(countAttended(item.participants), item.participants.length),
 })))
+
+const dateFormatter = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
 
 export function formatDate(value) {
   if (!value) return '일정 미정'
-  return new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(`${value}T12:00:00`))
+  return dateFormatter.format(new Date(`${value}T12:00:00`))
 }
 
 export async function loadTrainings() {
@@ -116,11 +123,21 @@ export function cancelTrainingForm() {
   newTraining.value = emptyTraining()
 }
 
-export async function saveTraining() {
-  if (!newTraining.value.title.trim() || !newTraining.value.date || !newTraining.value.time) return
+async function withSaving(action) {
   saving.value = true
   apiError.value = ''
   try {
+    await action()
+  } catch (error) {
+    apiError.value = error.message
+  } finally {
+    saving.value = false
+  }
+}
+
+export async function saveTraining() {
+  if (!newTraining.value.title.trim() || !newTraining.value.date || !newTraining.value.time) return
+  await withSaving(async () => {
     if (editingId.value) {
       const updated = await updateTrainingRequest(editingId.value, newTraining.value)
       const index = trainings.value.findIndex((item) => item.id === updated.id)
@@ -135,11 +152,7 @@ export async function saveTraining() {
       notice.value = '교육을 만들었습니다. 이제 대상자를 등록해 주세요.'
     }
     cancelTrainingForm()
-  } catch (error) {
-    apiError.value = error.message
-  } finally {
-    saving.value = false
-  }
+  })
 }
 
 export async function removeTraining(training) {
@@ -148,20 +161,14 @@ export async function removeTraining(training) {
     ? '교육을 삭제하면 연결된 대상자와 출석 기록도 삭제됩니다. 계속할까요?'
     : '이 교육을 삭제할까요?'
   if (!window.confirm(warning)) return
-  saving.value = true
-  apiError.value = ''
-  try {
+  await withSaving(async () => {
     await deleteTrainingRequest(training.id)
     trainings.value = trainings.value.filter((item) => item.id !== training.id)
     if (selectedId.value === training.id) selectedId.value = trainings.value[0]?.id ?? null
     if (attendee.value.trainingId === training.id) attendee.value.trainingId = trainings.value[0]?.id ?? null
     if (editingId.value === training.id) cancelTrainingForm()
     notice.value = '교육을 삭제했습니다.'
-  } catch (error) {
-    apiError.value = error.message
-  } finally {
-    saving.value = false
-  }
+  })
 }
 
 export function startEditParticipant(person) {
@@ -176,14 +183,12 @@ export function startEditParticipant(person) {
 
 export function cancelParticipantEdit() {
   editingParticipantId.value = null
-  newParticipant.value = { employee_number: '', name: '', department: '' }
+  newParticipant.value = emptyParticipant()
 }
 
 export async function saveParticipant() {
   if (!selectedTraining.value) return
-  saving.value = true
-  apiError.value = ''
-  try {
+  await withSaving(async () => {
     if (editingParticipantId.value) {
       await updateParticipantRequest(
         selectedTraining.value.id, editingParticipantId.value, newParticipant.value
@@ -197,28 +202,18 @@ export async function saveParticipant() {
     }
     cancelParticipantEdit()
     await loadTrainings()
-  } catch (error) {
-    apiError.value = error.message
-  } finally {
-    saving.value = false
-  }
+  })
 }
 
 export async function removeParticipant(person) {
   if (!selectedTraining.value) return
   if (!window.confirm(`${person.name}님을 이 교육의 대상자 명단에서 삭제할까요? 연결된 출석 기록도 삭제됩니다.`)) return
-  saving.value = true
-  apiError.value = ''
-  try {
+  await withSaving(async () => {
     await deleteParticipantRequest(selectedTraining.value.id, person.id)
     if (editingParticipantId.value === person.id) cancelParticipantEdit()
     await loadTrainings()
     notice.value = '이 교육의 대상자 명단에서 삭제했습니다.'
-  } catch (error) {
-    apiError.value = error.message
-  } finally {
-    saving.value = false
-  }
+  })
 }
 
 export async function uploadParticipants(file) {
@@ -241,15 +236,9 @@ export async function uploadParticipants(file) {
 
 export async function toggleAttendance(person) {
   if (saving.value) return
-  saving.value = true
-  apiError.value = ''
-  try {
+  await withSaving(async () => {
     Object.assign(person, await setAttendanceRequest(person.id, !person.attended))
-  } catch (error) {
-    apiError.value = error.message
-  } finally {
-    saving.value = false
-  }
+  })
 }
 
 export function startCheckIn(trainingId) {
