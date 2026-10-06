@@ -6,10 +6,13 @@ function csrfCookie() {
 
 export async function request(url, options = {}) {
   const response = await fetch(url, { credentials: 'same-origin', ...options })
+  if (response.ok && !url.startsWith('/api/accounts/') && url !== '/api/csrf/') {
+    window.dispatchEvent(new Event('auth-activity'))
+  }
   if (response.status === 204) return null
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
-    if (response.status === 401 && (!url.startsWith('/api/accounts/') || url === '/api/accounts/session/')) {
+    if (response.status === 401 && (!url.startsWith('/api/accounts/') || ['/api/accounts/session/', '/api/accounts/refresh/'].includes(url))) {
       window.dispatchEvent(new Event('session-expired'))
     }
     const message = Object.values(data.errors ?? {})[0] ?? data.detail ?? '요청을 처리하지 못했습니다.'

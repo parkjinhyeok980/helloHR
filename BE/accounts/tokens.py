@@ -15,10 +15,10 @@ def password_stamp(user):
     return salted_hmac('accounts.jwt.password', user.password, secret=settings.JWT_SIGNING_KEY).hexdigest()
 
 
-def issue_token(user):
+def issue_token(user, jti=None):
     now = int(datetime.now(timezone.utc).timestamp())
     claims = {'sub': str(user.pk), 'iat': now, 'exp': now + settings.JWT_ACCESS_TTL_SECONDS,
-              'jti': uuid4().hex, 'iss': 'helloHR', 'aud': 'helloHR-api',
+              'jti': jti or uuid4().hex, 'iss': 'helloHR', 'aud': 'helloHR-api',
               'pwd': password_stamp(user)}
     return jwt.encode(claims, settings.JWT_SIGNING_KEY, algorithm='HS256'), claims
 
@@ -26,13 +26,17 @@ def issue_token(user):
 def revoke_token(request):
     claims = getattr(request, 'jwt_claims', None)
     if claims:
-        RevokedToken.objects.get_or_create(jti=claims['jti'], defaults={
-            'expires_at': datetime.fromtimestamp(claims['exp'], timezone.utc),
+        # Refreshed tokens share the login's jti. Cover every version, including
+        # a refresh that was already in flight when logout began.
+        RevokedToken.objects.update_or_create(jti=claims['jti'], defaults={
+            'expires_at': datetime.fromtimestamp(
+                max(claims['exp'], int(datetime.now(timezone.utc).timestamp()) + settings.JWT_ACCESS_TTL_SECONDS), timezone.utc),
         })
 
 
-def attach_token(request, response, token):
-    rotate_token(request)
+def attach_token(request, response, token, rotate_csrf=True):
+    if rotate_csrf:
+        rotate_token(request)
     response.set_cookie(settings.JWT_COOKIE_NAME, token, max_age=settings.JWT_ACCESS_TTL_SECONDS,
                         httponly=True, secure=not settings.DEBUG, samesite='Lax', path='/api/')
     return response

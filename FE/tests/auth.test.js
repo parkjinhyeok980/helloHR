@@ -11,10 +11,11 @@ function harness() {
   const timers = new Map()
   const events = {}
   const documentEvents = {}
+  const writes = []
   const context = {
     ref: value => ({ value }),
     request: async () => response,
-    writeRequest: async () => response,
+    writeRequest: async (url) => { writes.push(url); return response },
     Date: { now: () => now },
     setTimeout: (callback, delay) => { timers.set(++nextId, { callback, at: now + delay }); return nextId },
     clearTimeout: id => timers.delete(id),
@@ -25,7 +26,7 @@ function harness() {
     .replace(/^import .*$/gm, '').replace(/export /g, '')
   vm.runInNewContext(source + '\nglobalThis.auth = { user, authError, authenticate, restoreSession, logout };', context)
   return {
-    auth: context.auth, events, documentEvents,
+    auth: context.auth, events, documentEvents, writes,
     response: value => { response = value },
     advance: (ms, fire = true) => {
       now += ms
@@ -71,4 +72,40 @@ test('manual logout cancels old expiry notification', async () => {
   h.advance(61000)
   assert.equal(h.auth.user.value, null)
   assert.equal(h.auth.authError.value, '')
+})
+
+test('user activity renews the token and keeps the page signed in', async () => {
+  const h = harness()
+  await h.auth.authenticate('guest', {})
+  h.advance(20000)
+  h.response({ user: { id: 1 }, server_time: 120, expires_at: 180 })
+  await h.documentEvents.keydown()
+  assert.equal(h.writes.at(-1), '/api/accounts/refresh/')
+  h.advance(40000)
+  assert.equal(h.auth.user.value.id, 1)
+  h.advance(20000)
+  assert.equal(h.auth.user.value, null)
+})
+
+test('activity bursts are throttled and background tabs do not run a heartbeat', async () => {
+  const h = harness()
+  await h.auth.authenticate('guest', {})
+  h.advance(20000)
+  h.response({ user: { id: 1 }, server_time: 120, expires_at: 180 })
+  await h.documentEvents.pointermove()
+  await h.documentEvents.pointermove()
+  await h.documentEvents.keydown()
+  assert.equal(h.writes.filter(url => url.endsWith('/refresh/')).length, 1)
+  h.advance(60000)
+  assert.equal(h.auth.user.value, null)
+  assert.equal(h.writes.filter(url => url.endsWith('/refresh/')).length, 1)
+})
+
+test('expired activity cannot restore authentication', async () => {
+  const h = harness()
+  await h.auth.authenticate('guest', {})
+  h.advance(61000, false)
+  await h.documentEvents.keydown()
+  assert.equal(h.auth.user.value, null)
+  assert.equal(h.writes.filter(url => url.endsWith('/refresh/')).length, 0)
 })

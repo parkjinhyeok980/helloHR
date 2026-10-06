@@ -14,6 +14,7 @@ from django.views.decorators.http import require_GET, require_POST
 from helloHR.payloads import read_json_object
 from .models import Account
 from .tokens import issue_token, attach_token, revoke_token
+from .decorators import account_required
 
 
 def authenticated_response(request, user, status=200):
@@ -39,6 +40,15 @@ def session(request):
     return JsonResponse({'user': user_data(request.user) if request.user.is_authenticated else None,
                          'expires_at': request.jwt_claims['exp'] if request.jwt_claims else None,
                          'server_time': int(timezone.now().timestamp())})
+
+
+@require_POST
+@account_required
+def refresh(request):
+    token, claims = issue_token(request.user, jti=request.jwt_claims['jti'])
+    response = JsonResponse({'user': user_data(request.user), 'expires_at': claims['exp'],
+                             'server_time': int(timezone.now().timestamp())})
+    return attach_token(request, response, token, rotate_csrf=False)
 
 
 @require_POST

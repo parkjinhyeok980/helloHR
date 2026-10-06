@@ -80,3 +80,39 @@ class JWTTests(TestCase):
         client.cookies[settings.JWT_COOKIE_NAME] = token
         self.assertEqual(client.post('/api/accounts/logout/').status_code, 403)
         self.assertEqual(client.post('/api/trainings/', {}, content_type='application/json').status_code, 403)
+
+    def test_refresh_extends_expiry_and_preserves_csrf_and_login_identity(self):
+        client = Client(enforce_csrf_checks=True)
+        _, claims = issue_token(self.user)
+        old_claims = {**claims, 'iat': int(time.time()) - 3500, 'exp': int(time.time()) + 100}
+        old_token = jwt.encode(old_claims, settings.JWT_SIGNING_KEY, algorithm='HS256')
+        client.cookies[settings.JWT_COOKIE_NAME] = old_token
+        self.assertEqual(client.post('/api/accounts/refresh/').status_code, 403)
+        client.get('/api/csrf/')
+        csrf = client.cookies['csrftoken'].value
+        response = client.post('/api/accounts/refresh/', HTTP_X_CSRFTOKEN=csrf)
+        self.assertEqual(response.status_code, 200)
+        self.assertGreater(response.json()['expires_at'], old_claims['exp'])
+        self.assertEqual(response.json()['expires_at'] - response.json()['server_time'], 3600)
+        self.assertEqual(client.cookies['csrftoken'].value, csrf)
+        new_token = client.cookies[settings.JWT_COOKIE_NAME].value
+        decoded = jwt.decode(new_token, settings.JWT_SIGNING_KEY, algorithms=['HS256'], audience='helloHR-api')
+        self.assertEqual(decoded['jti'], old_claims['jti'])
+        self.assertEqual(decoded['sub'], old_claims['sub'])
+        # Both parallel requests and different tabs can use the previous version.
+        self.client.cookies[settings.JWT_COOKIE_NAME] = old_token
+        self.assertEqual(self.client.get('/api/trainings/').status_code, 200)
+        client.post('/api/accounts/logout/', HTTP_X_CSRFTOKEN=csrf)
+        for token in [old_token, new_token]:
+            self.client.cookies[settings.JWT_COOKIE_NAME] = token
+            self.assertEqual(self.client.post('/api/accounts/refresh/').status_code, 401)
+        self.assertGreaterEqual(RevokedToken.objects.get(jti=decoded['jti']).expires_at.timestamp(), decoded['exp'])
+
+    def test_expired_and_missing_tokens_cannot_be_refreshed(self):
+        self.assertEqual(self.client.post('/api/accounts/refresh/').status_code, 401)
+        _, claims = issue_token(self.user)
+        claims.update(iat=int(time.time()) - 100, exp=int(time.time()) - 1)
+        self.client.cookies[settings.JWT_COOKIE_NAME] = jwt.encode(claims, settings.JWT_SIGNING_KEY, algorithm='HS256')
+        response = self.client.post('/api/accounts/refresh/')
+        self.assertEqual(response.status_code, 401)
+        self.assertNotIn(settings.JWT_COOKIE_NAME, response.cookies)

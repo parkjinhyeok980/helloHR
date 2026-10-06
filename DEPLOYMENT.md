@@ -2,7 +2,9 @@
 
 JWT authentication requires `PyJWT==2.15.1` and migration
 `accounts.0003_revokedtoken`. Install updated requirements, migrate, and restart
-the backend. Tokens expire after 3,600 seconds without automatic refresh.
+the backend. Tokens expire after 3,600 seconds. Active users renew valid tokens
+through the CSRF-protected `/api/accounts/refresh/` endpoint, at most every
+30 seconds; idle or hidden pages do not automatically renew tokens.
 Configure `JWT_ACCESS_TTL_SECONDS` to change this lifetime and optionally set
 `DJANGO_JWT_SIGNING_KEY` (defaults to `DJANGO_SECRET_KEY`). See [JWT authentication](docs/jwt-auth.md).
 
