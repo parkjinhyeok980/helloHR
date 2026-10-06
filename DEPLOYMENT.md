@@ -34,11 +34,18 @@ $env:DATABASE_URL = '<production PostgreSQL URL>'
 pip install -r requirements.txt
 cd BE
 python manage.py migrate
-python manage.py seed_demo
 ```
 
-`seed_demo` adds sample trainings and participants. Skip it if you want an
-empty production database and will create trainings yourself.
+After signing up in the application, optionally run
+`python manage.py seed_demo --email manager@example.com` to add sample trainings
+and participants to that account.
+
+The account feature adds `accounts.0001_initial`, `employees.0002`, and
+`trainings.0003`. Apply all migrations before deploying this version. Existing
+unowned data is preserved but hidden from account dashboards. To assign it to an
+explicitly chosen registered account, preview with
+`python manage.py assign_legacy_data --email manager@example.com`, then add
+`--apply` to perform the transfer. See [the account ERD and migration guide](docs/account-erd.md).
 
 Check `/api/csrf/` after deployment. It should return JSON. The application
 uses local file storage for uploads; persistent uploads require an external

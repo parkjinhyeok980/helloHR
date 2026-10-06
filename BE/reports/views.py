@@ -1,3 +1,4 @@
+from accounts.decorators import account_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.cache import never_cache
@@ -9,8 +10,9 @@ from trainings.serializers import serialize_training
 
 @require_GET
 @never_cache
+@account_required
 def training_report(request, training_id):
-    training = get_object_or_404(training_queryset(), pk=training_id)
+    training = get_object_or_404(training_queryset(), pk=training_id, owner=request.user)
     data = serialize_training(training)
     participants = {person.id: person for person in training.participants.all()}
     for person in data['participants']:

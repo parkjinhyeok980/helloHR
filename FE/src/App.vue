@@ -1,10 +1,30 @@
 <script setup>
-import { mode, section, notice, attendeeStep, apiError, loading, loadTrainings } from './composables/useDemoStore'
+import { ref, watch, onMounted } from 'vue'
+import { user, authReady, restoreSession, logout } from './composables/useAuth'
+import { resetStore, linkedTrainingId } from './composables/useDemoStore'
+import LoginView from './components/LoginView.vue'
+import { mode, section, notice, attendeeStep, apiError, loading, saving, uploading, loadTrainings } from './composables/useDemoStore'
 import SidebarNav from './components/SidebarNav.vue'
 import DashboardView from './components/DashboardView.vue'
 import TrainingsView from './components/TrainingsView.vue'
 import TrainingWorkspace from './components/TrainingWorkspace.vue'
 import ParticipantView from './components/ParticipantView.vue'
+
+const loggingOut = ref(false)
+watch(user, async (next) => {
+  resetStore()
+  if (next || linkedTrainingId) await loadTrainings()
+})
+onMounted(async () => {
+  await restoreSession()
+  if (!user.value && linkedTrainingId) await loadTrainings()
+})
+async function handleLogout() {
+  loggingOut.value = true
+  try { await logout() }
+  catch (error) { apiError.value = error.message }
+  finally { loggingOut.value = false }
+}
 
 const sectionNames = {
   dashboard: '대시보드',
@@ -20,7 +40,9 @@ function showParticipantView() {
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'participant-mode': mode === 'participant' }">
+  <div v-if="!authReady" class="auth-loading" role="status">로그인 정보를 확인하는 중…</div>
+  <LoginView v-else-if="!user && !(linkedTrainingId && mode === 'participant')" />
+  <div v-else class="app-shell" :class="{ 'participant-mode': mode === 'participant' }">
     <template v-if="mode === 'admin'">
       <SidebarNav />
       <main class="main-area">
@@ -28,8 +50,9 @@ function showParticipantView() {
           <div class="breadcrumb">{{ sectionNames[section] }}</div>
           <div class="top-actions">
             <button class="mode-link" @click="showParticipantView">참여자 화면 보기 ↗</button>
-            <div class="avatar">관</div>
-            <span class="user-label">교육 담당자</span>
+            <div class="avatar">{{ user?.name?.slice(0, 1) }}</div>
+            <span class="user-label">{{ user?.name }}</span>
+            <button class="mode-link" :disabled="loggingOut || saving || uploading" @click="handleLogout">로그아웃</button>
           </div>
         </header>
         <div class="page-content">
@@ -49,3 +72,7 @@ function showParticipantView() {
     <ParticipantView v-else />
   </div>
 </template>
+
+<style scoped>
+.auth-loading { min-height:100vh; display:grid; place-items:center; color:#7132f5; }
+</style>

@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from secrets import randbelow
 
 
@@ -8,6 +9,7 @@ def generate_attendance_code():
 
 
 class Training(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT, related_name='owned_trainings')
     class Category(models.TextChoices):
         REQUIRED = '법정 필수', '법정 필수'
         INTERNAL = '사내 교육', '사내 교육'

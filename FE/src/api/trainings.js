@@ -4,18 +4,21 @@ function csrfCookie() {
   return document.cookie.split('; ').find((part) => part.startsWith('csrftoken='))?.split('=')[1] ?? ''
 }
 
-async function request(url, options = {}) {
+export async function request(url, options = {}) {
   const response = await fetch(url, { credentials: 'same-origin', ...options })
   if (response.status === 204) return null
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
+    if (response.status === 401 && !url.startsWith('/api/accounts/')) {
+      window.dispatchEvent(new Event('session-expired'))
+    }
     const message = Object.values(data.errors ?? {})[0] ?? data.detail ?? '요청을 처리하지 못했습니다.'
     throw new Error(message)
   }
   return data
 }
 
-async function writeRequest(url, method, payload) {
+export async function writeRequest(url, method, payload) {
   await request('/api/csrf/')
   return request(url, {
     method,

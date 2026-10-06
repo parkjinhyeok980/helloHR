@@ -1,4 +1,5 @@
 import { computed, ref, watch } from 'vue'
+import { request } from '../api/trainings'
 import { countAttended, percentage } from '../utils/attendance'
 import {
   fetchTrainings,
@@ -13,7 +14,7 @@ import {
   uploadParticipantsRequest,
 } from '../api/trainings'
 
-const linkedTrainingId = Number(new URLSearchParams(window.location.search).get('training')) || null
+export const linkedTrainingId = Number(new URLSearchParams(window.location.search).get('training')) || null
 
 export const trainings = ref([])
 export const loading = ref(false)
@@ -67,11 +68,18 @@ export function formatDate(value) {
   return dateFormatter.format(new Date(`${value}T12:00:00`))
 }
 
+let loadVersion = 0
+
 export async function loadTrainings() {
+  const version = ++loadVersion
   loading.value = true
   apiError.value = ''
   try {
-    trainings.value = await fetchTrainings()
+    const results = linkedTrainingId && mode.value === 'participant'
+      ? [{ ...(await request(`/api/trainings/${linkedTrainingId}/public/`)), participants: [] }]
+      : await fetchTrainings()
+    if (version !== loadVersion) return
+    trainings.value = results
     if (!trainings.value.some((item) => item.id === selectedId.value)) {
       selectedId.value = trainings.value[0]?.id ?? null
     }
@@ -79,9 +87,10 @@ export async function loadTrainings() {
       attendee.value.trainingId = trainings.value[0]?.id ?? null
     }
   } catch (error) {
+    if (version !== loadVersion) return
     apiError.value = `교육 목록을 불러오지 못했습니다. Django 서버를 확인해 주세요. (${error.message})`
   } finally {
-    loading.value = false
+    if (version === loadVersion) loading.value = false
   }
 }
 
@@ -263,4 +272,20 @@ export async function checkIn() {
   }
 }
 
-loadTrainings()
+
+export function resetStore() {
+  loadVersion++
+  trainings.value = []
+  selectedId.value = null
+  section.value = 'dashboard'
+  mode.value = linkedTrainingId ? 'participant' : 'admin'
+  apiError.value = ''
+  notice.value = ''
+  search.value = ''
+  loading.value = false
+  cancelTrainingForm()
+  cancelParticipantEdit()
+  attendee.value = { trainingId: linkedTrainingId, name: '', employee_number: '', code: '', signature: [] }
+  attendeeStep.value = linkedTrainingId ? 'checkin' : 'list'
+  attendeeError.value = ''
+}

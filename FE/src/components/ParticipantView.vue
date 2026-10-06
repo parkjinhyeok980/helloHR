@@ -2,13 +2,19 @@
 import { mode, trainings, attendeeStep, attendee, attendeeTraining, attendeeError, checkingIn, loading, apiError, loadTrainings, formatDate, startCheckIn, checkIn } from '../composables/useDemoStore'
 
 import SignaturePad from './SignaturePad.vue'
+import { user } from '../composables/useAuth'
+
+function openAdmin() {
+  if (user.value) window.location.assign('/')
+  else mode.value = 'admin'
+}
 </script>
 
 <template>
   <div class="participant-page">
     <header class="participant-header">
       <div class="brand"><span class="brand-mark">✦</span><span>hello HRD</span></div>
-      <button class="mode-link" @click="mode = 'admin'">관리자 화면으로 →</button>
+      <button class="mode-link" @click="openAdmin">{{ user ? '관리자 화면으로 →' : '담당자 로그인 →' }}</button>
     </header>
     <div class="phone-shell">
       <div class="phone-content">

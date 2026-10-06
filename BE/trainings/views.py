@@ -1,3 +1,4 @@
+from accounts.decorators import account_required
 from datetime import datetime
 
 from django.http import HttpResponse, JsonResponse
@@ -56,23 +57,35 @@ def csrf_token(request):
     return JsonResponse({'ok': True})
 
 
+@require_GET
+def public_training(request, training_id):
+    training = get_object_or_404(Training, pk=training_id)
+    starts_at = timezone.localtime(training.starts_at) if training.starts_at else None
+    return JsonResponse({'id': training.id, 'title': training.title,
+                         'category': training.category, 'location': training.location,
+                         'date': starts_at.strftime('%Y-%m-%d') if starts_at else '',
+                         'time': starts_at.strftime('%H:%M') if starts_at else ''})
+
+
 @require_http_methods(['GET', 'POST'])
+@account_required
 def training_list(request):
     if request.method == 'GET':
-        trainings = training_queryset().order_by('-starts_at', '-id')
+        trainings = training_queryset().filter(owner=request.user).order_by('-starts_at', '-id')
         return JsonResponse({'results': [serialize_training(item) for item in trainings]})
 
     fields, errors = parse_payload(request)
     if errors:
         return JsonResponse({'errors': errors}, status=400)
-    training = Training.objects.create(**fields)
+    training = Training.objects.create(owner=request.user, **fields)
     return JsonResponse(serialize_training(training), status=201)
 
 
 @require_http_methods(['GET', 'PUT', 'DELETE'])
+@account_required
 def training_detail(request, training_id):
     queryset = Training.objects.all() if request.method == 'DELETE' else training_queryset()
-    training = get_object_or_404(queryset, pk=training_id)
+    training = get_object_or_404(queryset, pk=training_id, owner=request.user)
     if request.method == 'GET':
         return JsonResponse(serialize_training(training))
     if request.method == 'DELETE':

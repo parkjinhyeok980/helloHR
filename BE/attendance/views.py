@@ -1,3 +1,4 @@
+from accounts.decorators import account_required
 import math
 from secrets import compare_digest
 
@@ -66,8 +67,9 @@ def check_in(request, training_id):
 
 @require_POST
 @transaction.atomic
+@account_required
 def set_attendance(request, participant_id):
-    participant = get_object_or_404(TrainingParticipant.objects.select_for_update(), pk=participant_id)
+    participant = get_object_or_404(TrainingParticipant.objects.select_for_update(), pk=participant_id, training__owner=request.user)
     attended = read_payload(request).get('attended')
     if type(attended) is not bool:
         return JsonResponse({'detail': '출석 상태를 확인해 주세요.'}, status=400)

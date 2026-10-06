@@ -6,6 +6,8 @@
 
 https://hello-hrd.vercel.app/
 
+계정별 교육 관리와 로그인·회원가입, 기존 데이터 이전 방법은 [계정 ERD 및 적용 안내](docs/account-erd.md)를 참고하세요.
+
 ----
 
 <table width="100%">

@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 import json
 
 from django.test import Client, TestCase
@@ -8,11 +9,13 @@ from .models import Attendance, Signature
 
 class SignedAttendanceTests(TestCase):
     def setUp(self):
-        self.training = Training.objects.create(title='Signature test', attendance_code='0123')
-        department = Department.objects.create(name='HR')
-        employee = Employee.objects.create(name='Kim', employee_number='E001', department=department)
+        self.user = get_user_model().objects.create_user(username='owner', password='test-password')
+        self.training = Training.objects.create(owner=self.user, title='Signature test', attendance_code='0123')
+        department = Department.objects.create(owner=self.user, name='HR')
+        employee = Employee.objects.create(owner=self.user, name='Kim', employee_number='E001', department=department)
         self.person = TrainingParticipant.objects.create(training=self.training, employee=employee)
         self.client = Client(enforce_csrf_checks=True)
+        self.client.force_login(self.user)
         self.client.get('/api/csrf/')
         self.token = self.client.cookies['csrftoken'].value
         self.url = f'/api/trainings/{self.training.id}/check-in/'
@@ -34,6 +37,7 @@ class SignedAttendanceTests(TestCase):
         self.assertEqual(Attendance.objects.count(), 1)
         self.assertEqual(Signature.objects.count(), 1)
         other_browser = Client()
+        other_browser.force_login(self.user)
         person = other_browser.get('/api/trainings/').json()['results'][0]['participants'][0]
         self.assertTrue(person['attended'])
         self.assertTrue(person['signed'])

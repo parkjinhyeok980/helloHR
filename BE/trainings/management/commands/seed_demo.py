@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
+from accounts.models import Account
 from django.db import transaction
 from django.utils import timezone
 
@@ -12,8 +13,14 @@ from trainings.participants import enroll
 class Command(BaseCommand):
     help = '교육 및 대상자 데모 데이터를 중복 없이 생성합니다.'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--email', required=True, help='데모 데이터를 생성할 가입 계정의 이메일')
+
     @transaction.atomic
     def handle(self, *args, **options):
+        account = Account.objects.filter(email=options['email'].strip().lower()).first()
+        if account is None:
+            raise CommandError('가입된 계정 이메일을 지정해 주세요.')
         today = timezone.localdate()
         people = [
             {'employee_number': 'DEMO-001', 'name': '김민수', 'department': '인사팀'},
@@ -32,6 +39,7 @@ class Command(BaseCommand):
         for title, category, day_offset, time, location, members, attendees in examples:
             start = datetime.combine(today + timedelta(days=day_offset), datetime.strptime(time, '%H:%M').time())
             training, created = Training.objects.get_or_create(
+                owner=account.user,
                 title=title,
                 defaults={
                     'category': category,

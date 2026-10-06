@@ -1,3 +1,4 @@
+from accounts.decorators import account_required
 from io import BytesIO
 from zipfile import BadZipFile
 
@@ -39,17 +40,18 @@ def validate_person(data):
 
 
 def enroll(training, person):
-    department, _ = Department.objects.get_or_create(name=person['department'])
+    department, _ = Department.objects.get_or_create(owner_id=training.owner_id, name=person['department'])
     employee, _ = Employee.objects.update_or_create(
-        employee_number=person['employee_number'],
+        owner_id=training.owner_id, employee_number=person['employee_number'],
         defaults={'name': person['name'], 'department': department},
     )
     return TrainingParticipant.objects.get_or_create(training=training, employee=employee)
 
 
 @require_http_methods(['GET', 'POST'])
+@account_required
 def participant_list(request, training_id):
-    training = get_object_or_404(Training, pk=training_id)
+    training = get_object_or_404(Training, pk=training_id, owner=request.user)
     if request.method == 'GET':
         people = participant_queryset().filter(training=training).order_by('id')
         return JsonResponse({'results': [serialize_participant(item) for item in people]})
@@ -66,11 +68,12 @@ def participant_list(request, training_id):
 
 
 @require_http_methods(['PUT', 'DELETE'])
+@account_required
 def participant_detail(request, training_id, participant_id):
     participant = get_object_or_404(
         TrainingParticipant.objects.select_related('employee__department'),
         pk=participant_id,
-        training_id=training_id,
+        training_id=training_id, training__owner=request.user,
     )
     if request.method == 'DELETE':
         participant.delete()
@@ -85,14 +88,14 @@ def participant_detail(request, training_id, participant_id):
 
     employee = participant.employee
     if Employee.objects.exclude(pk=employee.pk).filter(
-        employee_number=person['employee_number']
+        owner=request.user, employee_number=person['employee_number']
     ).exists():
         return JsonResponse(
             {'errors': {'employee_number': '다른 사원이 사용 중인 사번입니다.'}}, status=409
         )
 
     with transaction.atomic():
-        department, _ = Department.objects.get_or_create(name=person['department'])
+        department, _ = Department.objects.get_or_create(owner=request.user, name=person['department'])
         employee.employee_number = person['employee_number']
         employee.name = person['name']
         employee.department = department
@@ -101,8 +104,9 @@ def participant_detail(request, training_id, participant_id):
 
 
 @require_POST
+@account_required
 def participant_upload(request, training_id):
-    training = get_object_or_404(Training, pk=training_id)
+    training = get_object_or_404(Training, pk=training_id, owner=request.user)
     upload = request.FILES.get('file')
     if not upload or not upload.name.lower().endswith('.xlsx'):
         return JsonResponse({'errors': {'file': '.xlsx 엑셀 파일을 선택해 주세요.'}}, status=400)
@@ -172,6 +176,7 @@ def participant_upload(request, training_id):
 
 
 @require_GET
+@account_required
 def participant_template(request):
     workbook = Workbook()
     sheet = workbook.active

@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from attendance.models import Attendance, Signature
 from employees.models import Department, Employee
@@ -6,10 +7,12 @@ from trainings.models import Training, TrainingParticipant
 
 class SignedReportTests(TestCase):
     def setUp(self):
-        self.training = Training.objects.create(title='Signed report')
-        department = Department.objects.create(name='HR')
-        employee = Employee.objects.create(name='Kim', employee_number='E01', department=department)
+        self.user = get_user_model().objects.create_user(username='owner', password='test-password')
+        self.training = Training.objects.create(owner=self.user, title='Signed report')
+        department = Department.objects.create(owner=self.user, name='HR')
+        employee = Employee.objects.create(owner=self.user, name='Kim', employee_number='E01', department=department)
         self.person = TrainingParticipant.objects.create(training=self.training, employee=employee)
+        self.client.force_login(self.user)
         self.url = f'/api/trainings/{self.training.id}/report/'
         self.strokes = [[[0.1, 0.2], [0.8, 0.7]]]
 
@@ -42,7 +45,7 @@ class SignedReportTests(TestCase):
         Signature.objects.create(attendance=older, strokes=[[[0, 0], [1, 1]]])
         latest = Attendance.objects.create(participant=self.person)
         Signature.objects.create(attendance=latest, strokes=self.strokes)
-        other = Training.objects.create(title='Other')
+        other = Training.objects.create(owner=self.user, title='Other')
         other_person = TrainingParticipant.objects.create(training=other, employee=self.person.employee)
         other_attendance = Attendance.objects.create(participant=other_person)
         Signature.objects.create(attendance=other_attendance, strokes=[[[1, 0], [0, 1]]])

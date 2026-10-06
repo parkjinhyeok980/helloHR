@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 import json
 from io import BytesIO
 
@@ -14,7 +15,9 @@ from .models import Training, TrainingParticipant
 
 class TrainingApiTests(TestCase):
     def setUp(self):
+        self.user = get_user_model().objects.create_user(username='owner', password='test-password')
         self.client = Client(enforce_csrf_checks=True)
+        self.client.force_login(self.user)
         self.client.get('/api/csrf/')
         self.csrf = self.client.cookies['csrftoken'].value
         self.payload = {
@@ -67,7 +70,7 @@ class TrainingApiTests(TestCase):
         self.assertEqual(Training.objects.count(), 0)
 
     def test_json_validation_is_consistent_across_write_endpoints(self):
-        training = Training.objects.create(title='Validation')
+        training = Training.objects.create(owner=self.user, title='Validation')
         path = f'/api/trainings/{training.id}/participants/'
         person = self.request_json('post', path, {
             'employee_number': 'E01', 'name': 'Kim', 'department': 'HR',
@@ -93,7 +96,7 @@ class TrainingApiTests(TestCase):
                     self.assertEqual(response.json(), {'errors': {'body': message}})
 
     def test_read_query_count_does_not_grow_with_participants(self):
-        training = Training.objects.create(title='Query count')
+        training = Training.objects.create(owner=self.user, title='Query count')
         path = f'/api/trainings/{training.id}/participants/'
         urls = ['/api/trainings/', f'/api/trainings/{training.id}/',
                 path, f'/api/trainings/{training.id}/report/']
@@ -144,7 +147,7 @@ class TrainingApiTests(TestCase):
         )
 
     def test_manual_registration_and_excel_upload(self):
-        training = Training.objects.create(title='업로드 테스트')
+        training = Training.objects.create(owner=self.user, title='업로드 테스트')
         path = f'/api/trainings/{training.id}/participants/'
         person = {'employee_number': 'EMP-001', 'name': '김민수', 'department': '인사팀'}
         created = self.request_json('post', path, person)
@@ -168,7 +171,7 @@ class TrainingApiTests(TestCase):
         self.assertEqual(len(self.client.get(path).json()['results']), 2)
 
     def test_invalid_excel_row_does_not_partially_import(self):
-        training = Training.objects.create(title='잘못된 파일 테스트')
+        training = Training.objects.create(owner=self.user, title='잘못된 파일 테스트')
         upload = self.make_workbook([
             ['사번', '이름', '부서'],
             ['EMP-001', '김민수', '인사팀'],
@@ -183,8 +186,8 @@ class TrainingApiTests(TestCase):
         self.assertEqual(TrainingParticipant.objects.count(), 0)
 
     def test_update_shared_employee_and_delete_only_selected_enrollment(self):
-        first = Training.objects.create(title='첫 교육')
-        second = Training.objects.create(title='둘째 교육')
+        first = Training.objects.create(owner=self.user, title='첫 교육')
+        second = Training.objects.create(owner=self.user, title='둘째 교육')
         person = {'employee_number': 'EMP-001', 'name': '김민수', 'department': '인사팀'}
         first_created = self.request_json(
             'post', f'/api/trainings/{first.id}/participants/', person
