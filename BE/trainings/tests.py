@@ -1,3 +1,4 @@
+from accounts.testing import authenticate_client
 from django.contrib.auth import get_user_model
 import json
 from io import BytesIO
@@ -17,7 +18,7 @@ class TrainingApiTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='owner', password='test-password')
         self.client = Client(enforce_csrf_checks=True)
-        self.client.force_login(self.user)
+        authenticate_client(self.client, self.user)
         self.client.get('/api/csrf/')
         self.csrf = self.client.cookies['csrftoken'].value
         self.payload = {

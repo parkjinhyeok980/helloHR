@@ -1,5 +1,11 @@
 # Vercel deployment
 
+JWT authentication requires `PyJWT==2.15.1` and migration
+`accounts.0003_revokedtoken`. Install updated requirements, migrate, and restart
+the backend. Tokens expire after 3,600 seconds without automatic refresh.
+Configure `JWT_ACCESS_TTL_SECONDS` to change this lifetime and optionally set
+`DJANGO_JWT_SIGNING_KEY` (defaults to `DJANGO_SECRET_KEY`). See [JWT authentication](docs/jwt-auth.md).
+
 Guest login requires `accounts.0002_guest_account`. Run `python manage.py migrate`
 before deploying: it creates the shared, non-staff `guest` account and transfers
 unowned legacy trainings, employees, and departments to it while retaining

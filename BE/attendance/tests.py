@@ -1,3 +1,4 @@
+from accounts.testing import authenticate_client
 from django.contrib.auth import get_user_model
 import json
 
@@ -15,7 +16,7 @@ class SignedAttendanceTests(TestCase):
         employee = Employee.objects.create(owner=self.user, name='Kim', employee_number='E001', department=department)
         self.person = TrainingParticipant.objects.create(training=self.training, employee=employee)
         self.client = Client(enforce_csrf_checks=True)
-        self.client.force_login(self.user)
+        authenticate_client(self.client, self.user)
         self.client.get('/api/csrf/')
         self.token = self.client.cookies['csrftoken'].value
         self.url = f'/api/trainings/{self.training.id}/check-in/'
@@ -37,7 +38,7 @@ class SignedAttendanceTests(TestCase):
         self.assertEqual(Attendance.objects.count(), 1)
         self.assertEqual(Signature.objects.count(), 1)
         other_browser = Client()
-        other_browser.force_login(self.user)
+        authenticate_client(other_browser, self.user)
         person = other_browser.get('/api/trainings/').json()['results'][0]['participants'][0]
         self.assertTrue(person['attended'])
         self.assertTrue(person['signed'])

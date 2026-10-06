@@ -10,3 +10,8 @@ class Account(models.Model):
 
     def __str__(self):
         return self.email
+
+
+class RevokedToken(models.Model):
+    jti = models.CharField(max_length=32, primary_key=True)
+    expires_at = models.DateTimeField(db_index=True)

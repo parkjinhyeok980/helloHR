@@ -53,6 +53,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'accounts.tokens.JWTAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -157,3 +158,9 @@ SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
+
+JWT_SIGNING_KEY = os.environ.get('DJANGO_JWT_SIGNING_KEY', SECRET_KEY)
+JWT_COOKIE_NAME = 'hellohr_access'
+JWT_ACCESS_TTL_SECONDS = int(os.environ.get('JWT_ACCESS_TTL_SECONDS', '3600'))
+if not 1 <= JWT_ACCESS_TTL_SECONDS <= 86400:
+    raise ValueError('JWT_ACCESS_TTL_SECONDS must be between 1 and 86400')

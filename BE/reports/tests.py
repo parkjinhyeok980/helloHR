@@ -1,3 +1,4 @@
+from accounts.testing import authenticate_client
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from attendance.models import Attendance, Signature
@@ -12,7 +13,7 @@ class SignedReportTests(TestCase):
         department = Department.objects.create(owner=self.user, name='HR')
         employee = Employee.objects.create(owner=self.user, name='Kim', employee_number='E01', department=department)
         self.person = TrainingParticipant.objects.create(training=self.training, employee=employee)
-        self.client.force_login(self.user)
+        authenticate_client(self.client, self.user)
         self.url = f'/api/trainings/{self.training.id}/report/'
         self.strokes = [[[0.1, 0.2], [0.8, 0.7]]]
 

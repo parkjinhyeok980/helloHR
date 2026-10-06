@@ -1,3 +1,4 @@
+from accounts.testing import authenticate_client
 from io import StringIO
 
 from django.contrib.auth import get_user_model
@@ -129,7 +130,7 @@ class IsolationTests(TestCase):
         self.person = {'employee_number': 'E001', 'name': 'Kim', 'department': 'HR'}
         self.pa, _ = enroll(self.training_a, self.person)
         self.pb, _ = enroll(self.training_b, self.person)
-        self.client.force_login(self.a)
+        authenticate_client(self.client, self.a)
 
     def test_list_and_create_are_owned(self):
         Training.objects.create(title='Legacy')
