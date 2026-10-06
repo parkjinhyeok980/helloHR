@@ -84,3 +84,15 @@ def signin(request):
 def signout(request):
     logout(request)
     return JsonResponse({'ok': True})
+
+
+@require_POST
+@never_cache
+def guest_login(request):
+    user = get_user_model().objects.filter(
+        username='guest', is_active=True, is_staff=False, is_superuser=False,
+    ).first()
+    if user is None or user.has_usable_password():
+        return JsonResponse({'detail': '게스트 계정을 이용할 수 없습니다.'}, status=503)
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    return JsonResponse({'user': user_data(user)})

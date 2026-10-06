@@ -10,6 +10,7 @@ const confirmation = ref('')
 const remember = ref(false)
 const visible = ref(false)
 const busy = ref(false)
+const enteringGuest = ref(false)
 const error = ref('')
 try {
   email.value = localStorage.getItem('hellohr_saved_email') || ''
@@ -21,6 +22,22 @@ function switchForm() {
   error.value = ''
   password.value = ''
   confirmation.value = ''
+}
+
+async function startGuest() {
+  if (busy.value) return
+  busy.value = true
+  enteringGuest.value = true
+  error.value = ''
+  try {
+    await authenticate('guest', {})
+    if (new URLSearchParams(window.location.search).has('training')) window.location.replace('/')
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    busy.value = false
+    enteringGuest.value = false
+  }
 }
 
 async function submit() {
@@ -83,6 +100,10 @@ async function submit() {
           <button class="auth-submit" type="submit" :disabled="busy">{{ busy ? '처리 중…' : signup ? '회원가입' : '로그인' }} <span aria-hidden="true">→</span></button>
         </fieldset>
       </form>
+      <button class="auth-guest" type="button" :disabled="busy" @click="startGuest">
+        {{ enteringGuest ? '게스트로 접속 중…' : '게스트 계정으로 시작하기' }}
+      </button>
+      <p class="auth-guest-hint">회원가입 없이 시작해 보세요. 게스트의 교육 데이터는 함께 공유됩니다.</p>
       <div class="auth-footer">
         <span>{{ signup ? '이미 계정이 있으신가요?' : '아직 계정이 없으신가요?' }}</span>
         <button type="button" :disabled="busy" @click="switchForm">{{ signup ? '로그인' : '회원가입' }}</button>
@@ -94,6 +115,7 @@ async function submit() {
 </template>
 
 <style scoped>
+.auth-guest{width:100%;min-height:48px;margin-top:12px;padding:10px 14px;border:1px solid #d9c9fc;border-radius:12px;background:#f8f5ff;color:#7132f5;font-size:14px;font-weight:700}.auth-guest:hover:not(:disabled){background:#eee6ff}.auth-guest-hint{margin:9px 0 0;text-align:center;font-size:11px;line-height:1.6;color:#827b8c}
 .auth-page{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px;background:linear-gradient(120deg,#5941d8 0%,#8050ed 48%,#40b9c1 100%);position:relative;overflow:hidden}
 .auth-decoration{position:absolute;border:1px solid #ffffff20;border-radius:50%;pointer-events:none;width:580px;height:580px}.auth-decoration-one{top:-300px;right:-180px}.auth-decoration-two{bottom:-360px;left:-180px;width:720px;height:720px}
 .auth-card{position:relative;width:460px;max-width:100%;padding:40px 42px 30px;border:1px solid #ffffff99;border-radius:24px;background:#fff;box-shadow:0 24px 70px #29205c30}

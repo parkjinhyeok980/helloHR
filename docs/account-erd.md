@@ -1,5 +1,11 @@
 # 계정 및 교육 데이터 ERD
 
+## 게스트로 시작하기
+
+로그인 화면의 **게스트 계정으로 시작하기** 버튼은 `POST /api/accounts/guest/`로 공유 `guest` 계정에 로그인한다. 일반 로그인과 동일하게 CSRF 보호 및 Django 세션을 사용한다. 비밀번호 로그인을 허용하지 않으며 관리자 권한이 없다. 게스트 사용자는 같은 교육 현황을 조회·수정하며, 일반 계정의 데이터에는 접근할 수 없다.
+
+`accounts.0002_guest_account` 마이그레이션은 `guest` 계정과 프로필(`guest@hellohr.invalid`)을 생성하고, 소유자 없는 기존 교육·사원·부서를 이 계정에 연결한다. 기존 대상자·출석·서명·보고서 연결은 유지하며, 이미 다른 계정이 소유한 데이터는 변경하지 않는다. 운영 환경에서도 `python manage.py migrate`를 실행하면 동일하게 적용된다. 이 데이터 이전 마이그레이션은 자동 역이전을 지원하지 않는다.
+
 ```mermaid
 erDiagram
     AUTH_USER ||--o| ACCOUNTS_ACCOUNT : profile

@@ -24,7 +24,7 @@ class AccountTests(TestCase):
         self.assertIsNone(self.client.get('/api/accounts/session/').json()['user'])
         response = self.post('/api/accounts/signup/', self.payload)
         self.assertEqual(response.status_code, 201)
-        user = Account.objects.get().user
+        user = Account.objects.get(email=self.payload['email']).user
         self.assertTrue(user.check_password(self.payload['password']))
         self.assertNotEqual(user.password, self.payload['password'])
         self.assertEqual(self.client.get('/api/accounts/session/').json()['user']['name'], self.payload['name'])
@@ -39,10 +39,10 @@ class AccountTests(TestCase):
         for payload in [{**self.payload, 'password': '123'}, {**self.payload, 'email': 'bad'},
                         {**self.payload, 'name': ''}, {'email': [], 'name': {}, 'password': []}]:
             self.assertEqual(self.post('/api/accounts/signup/', payload).status_code, 400)
-        self.assertFalse(Account.objects.exists())
+        self.assertFalse(Account.objects.filter(email=self.payload['email']).exists())
         self.post('/api/accounts/signup/', self.payload)
         self.assertEqual(self.post('/api/accounts/signup/', {**self.payload, 'email': 'MANAGER@example.com'}).status_code, 409)
-        self.assertEqual(get_user_model().objects.count(), 1)
+        self.assertEqual(get_user_model().objects.exclude(username='guest').count(), 1)
         for endpoint in ['signup', 'login', 'logout']:
             self.assertEqual(self.client.post(f'/api/accounts/{endpoint}/', self.payload, content_type='application/json').status_code, 403)
 
@@ -51,6 +51,73 @@ class AccountTests(TestCase):
         self.post('/api/accounts/logout/', {})
         get_user_model().objects.update(is_active=False)
         self.assertEqual(self.post('/api/accounts/login/', self.payload).status_code, 401)
+
+
+class GuestAccountTests(TestCase):
+    def setUp(self):
+        self.guest = get_user_model().objects.get(username='guest')
+        self.training = Training.objects.create(owner=self.guest, title='Guest training')
+
+    def test_guest_login_session_and_logout(self):
+        client = Client(enforce_csrf_checks=True)
+        self.assertEqual(client.get('/api/accounts/guest/').status_code, 405)
+        self.assertEqual(client.post('/api/accounts/guest/').status_code, 403)
+        client.get('/api/csrf/')
+        response = client.post('/api/accounts/guest/', HTTP_X_CSRFTOKEN=client.cookies['csrftoken'].value)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['user']['id'], self.guest.pk)
+        self.assertEqual(client.get('/api/accounts/session/').json()['user']['id'], self.guest.pk)
+        self.assertEqual(client.get('/api/trainings/').json()['results'][0]['id'], self.training.pk)
+        client.post('/api/accounts/logout/', HTTP_X_CSRFTOKEN=client.cookies['csrftoken'].value)
+        self.assertIsNone(client.get('/api/accounts/session/').json()['user'])
+        self.assertFalse(self.guest.has_usable_password())
+        self.assertFalse(self.guest.is_staff)
+
+    def test_shared_guest_does_not_access_private_accounts(self):
+        owner = get_user_model().objects.create_user(username='private')
+        private = Training.objects.create(owner=owner, title='Private')
+        for client in [Client(), Client()]:
+            self.assertEqual(client.post('/api/accounts/guest/').json()['user']['id'], self.guest.pk)
+            self.assertEqual(client.get(f'/api/trainings/{private.pk}/').status_code, 404)
+            self.assertEqual(len(client.get('/api/trainings/').json()['results']), 1)
+        self.assertEqual(get_user_model().objects.filter(username='guest').count(), 1)
+
+    def test_disabled_or_privileged_guest_cannot_login(self):
+        for field in ['is_staff', 'is_superuser', 'is_active']:
+            original = getattr(self.guest, field)
+            setattr(self.guest, field, not original)
+            self.guest.save()
+            self.assertEqual(self.client.post('/api/accounts/guest/').status_code, 503)
+            setattr(self.guest, field, original)
+        self.guest.set_password('Not-for-public-login-739!')
+        self.guest.save()
+        self.assertEqual(self.client.post('/api/accounts/guest/').status_code, 503)
+
+    def test_migration_assigns_only_legacy_and_preserves_relations(self):
+        from importlib import import_module
+        from types import SimpleNamespace
+        from django.apps import apps
+        from django.db import connection
+        from attendance.models import Attendance, Signature
+
+        self.training.delete()
+        self.guest.delete()
+        owner = get_user_model().objects.create_user(username='private')
+        private = Training.objects.create(owner=owner, title='Private')
+        legacy = Training.objects.create(title='Legacy')
+        person, _ = enroll(legacy, {'employee_number': 'OLD', 'name': 'Kim', 'department': 'HR'})
+        attendance = Attendance.objects.create(participant=person)
+        signature = Signature.objects.create(attendance=attendance, strokes=[[[0, 0], [1, 1]]])
+        migration = import_module('accounts.migrations.0002_guest_account')
+        migration.create_guest_and_assign_legacy(apps, SimpleNamespace(connection=connection))
+        guest = get_user_model().objects.get(username='guest')
+        legacy.refresh_from_db()
+        private.refresh_from_db()
+        self.assertEqual(legacy.owner, guest)
+        self.assertEqual(private.owner, owner)
+        self.assertEqual(Employee.objects.get(pk=person.employee_id).owner, guest)
+        self.assertEqual(Department.objects.get(pk=person.employee.department_id).owner, guest)
+        self.assertTrue(Signature.objects.filter(pk=signature.pk, attendance__participant=person).exists())
 
 
 class IsolationTests(TestCase):

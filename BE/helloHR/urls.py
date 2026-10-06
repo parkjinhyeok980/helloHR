@@ -26,6 +26,7 @@ urlpatterns = [
     path('api/accounts/session/', account_views.session),
     path('api/accounts/signup/', account_views.signup),
     path('api/accounts/login/', account_views.signin),
+    path('api/accounts/guest/', account_views.guest_login),
     path('api/accounts/logout/', account_views.signout),
     path('api/trainings/<int:training_id>/public/', training_views.public_training),
     path('admin/', admin.site.urls),

@@ -1,5 +1,11 @@
 # Vercel deployment
 
+Guest login requires `accounts.0002_guest_account`. Run `python manage.py migrate`
+before deploying: it creates the shared, non-staff `guest` account and transfers
+unowned legacy trainings, employees, and departments to it while retaining
+attendance and signature relationships. Data already owned by another account
+is not transferred. Guest visitors share the same editable workspace.
+
 After updating the signed attendance feature, run `python manage.py migrate`
 against the deployment database before deploying the new application. Migration
 `attendance.0002_signature_strokes` stores normalized handwritten strokes in the
