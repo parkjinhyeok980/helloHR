@@ -1,5 +1,12 @@
 # Design System Inspired by Kraken
 
+## Project implementation
+
+- This file is the design source of truth for the landing page, login/signup, and dashboard. `DEPLOYMENT.md` covers deployment, not visual design.
+- The [FinFit landing page](https://github.com/FinacneFit/frontend/blob/master/src/views/LandingView.vue) informs the introduction-left, signup/login-right composition; its blue/teal gradient is replaced by this system's white surfaces and Kraken Purple.
+- Shared tokens live in `FE/src/style.css`. Public pages share `PublicLayout.vue`; the dashboard uses the same brand, typography fallbacks, borders, subtle shadows, and 12px buttons. The actual available font fallbacks are IBM Plex Sans and Noto Sans KR.
+- Anonymous entry: `/#/` (landing), `/#/login`, `/#/signup`. Authenticated users enter the dashboard. QR links remain available without login. Logout and JWT expiry return to login.
+
 ## 1. Visual Theme & Atmosphere
 
 Kraken's website is a clean, trustworthy crypto exchange that uses purple as its commanding brand color. The design operates on white backgrounds with Kraken Purple (`#7132f5`, `#5741d8`, `#5b1ecf`) creating a distinctive, professional crypto identity. The proprietary Kraken-Brand font handles display headings with bold (700) weight and negative tracking, while Kraken-Product (with IBM Plex Sans fallback) serves as the UI workhorse.

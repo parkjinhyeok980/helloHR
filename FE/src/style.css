@@ -1,6 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
 :root {
+  --surface: #ffffff;
+  --surface-subtle: #fafafb;
+  --success: #149e61;
+  --error: #a73d42;
+  --button-radius: 12px;
+  --card-radius: 16px;
   --brand: #7132f5;
   --brand-dark: #5741d8;
   --brand-deep: #5b1ecf;

@@ -1,8 +1,9 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { user, authReady, restoreSession, logout } from './composables/useAuth'
 import { resetStore, linkedTrainingId } from './composables/useDemoStore'
 import LoginView from './components/LoginView.vue'
+import LandingView from './components/LandingView.vue'
 import { mode, section, notice, attendeeStep, apiError, loading, saving, uploading, loadTrainings } from './composables/useDemoStore'
 import SidebarNav from './components/SidebarNav.vue'
 import DashboardView from './components/DashboardView.vue'
@@ -11,7 +12,15 @@ import TrainingWorkspace from './components/TrainingWorkspace.vue'
 import ParticipantView from './components/ParticipantView.vue'
 
 const loggingOut = ref(false)
-watch(user, async (next) => {
+const publicPage = ref(window.location.hash === '#/signup' ? 'signup' : window.location.hash === '#/login' ? 'login' : 'home')
+function updatePublicPage() {
+  publicPage.value = window.location.hash === '#/signup' ? 'signup' : window.location.hash === '#/login' ? 'login' : 'home'
+  window.scrollTo(0, 0)
+}
+window.addEventListener('hashchange', updatePublicPage)
+onBeforeUnmount(() => window.removeEventListener('hashchange', updatePublicPage))
+watch(user, async (next, previous) => {
+  if (!next && previous) window.location.hash = '/login'
   resetStore()
   if (next || linkedTrainingId) await loadTrainings()
 })
@@ -41,7 +50,10 @@ function showParticipantView() {
 
 <template>
   <div v-if="!authReady" class="auth-loading" role="status">로그인 정보를 확인하는 중…</div>
-  <LoginView v-else-if="!user && !(linkedTrainingId && mode === 'participant')" />
+  <template v-else-if="!user && !(linkedTrainingId && mode === 'participant')">
+    <LandingView v-if="publicPage === 'home' && !linkedTrainingId" />
+    <LoginView v-else :initial-mode="publicPage === 'signup' ? 'signup' : 'login'" />
+  </template>
   <div v-else class="app-shell" :class="{ 'participant-mode': mode === 'participant' }">
     <template v-if="mode === 'admin'">
       <SidebarNav />

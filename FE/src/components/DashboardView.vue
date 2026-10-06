@@ -131,9 +131,9 @@ function goToToday() {
 <style scoped>
 .stat-icon svg { display: block; width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .education-icon { color: var(--brand); background: var(--brand-subtle); }
-.people-icon { color: #4774c4; background: #edf2fc; }
-.attendance-icon { color: #149e61; background: #e8f5ee; }
-.rate-icon { color: #b58127; background: #fbf3e3; }
+.people-icon { color: var(--brand-dark); background: var(--brand-subtle); }
+.attendance-icon { color: var(--success); background: rgba(20,158,97,.16); }
+.rate-icon { color: var(--muted); background: rgba(104,107,130,.12); }
 .stat-link { appearance: none; width: 100%; text-align: left; color: var(--ink); }
 .stat-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
 .dashboard-overview { grid-template-columns: minmax(0, 1fr) minmax(260px, .9fr) minmax(0, 1.2fr); gap: 20px; }
